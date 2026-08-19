@@ -1,0 +1,37 @@
+[project]
+name = "waves-service"
+version = "0.0.1"
+description = "鸣潮查询服务"
+license = {text = "GPL-3.0"}
+# 构建产物按 CPython 版本分发, 仅这几个小版本有对应包
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "aiofiles>=23.0.0",
+    "aiohttp>=3.10.0",
+    "aiosqlite>=0.19.0",
+    "apscheduler>=3.10.1,<4.0.0",
+    "async-timeout>=4.0.3",
+    "beautifulsoup4>=4.12.0",
+    "boltons>=25.0.0",
+    "cryptography>=42.0.0",
+    "fastapi>=0.110.0",
+    "fonttools>=4.50.0",
+    "greenlet>=3.0.0",
+    "httpx>=0.26.0",
+    "jinja2>=3.1.2",
+    "lxml>=5.0.0",
+    "msgspec>=0.18.0",
+    "numpy>=1.26.0",
+    "opencv-python-headless>=4.9.0",
+    "pillow>=10.2.0",
+    "pydantic>=2.6.0",
+    "python-multipart>=0.0.9",
+    "pytz>=2024.1",
+    "qrcode[pil]>=7.3.1,<8.0.0",
+    "sqlalchemy>=2.0.0,<2.1.0",
+    "sqlmodel<0.0.31",
+    "uvicorn>=0.27.0",
+]
+
+[tool.setuptools]
+packages = ["rover", "waves", "roversign", "scoreecho"]

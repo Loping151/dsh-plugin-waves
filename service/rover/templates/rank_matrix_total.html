@@ -1,0 +1,66 @@
+{% extends "rank_board.html" %}
+
+{% block style %}
+/* ---------------- 行内: 队伍块 / 总分 ---------------- */
+.row .gold { position: absolute; left: 210px; top: 40px; display: flex; align-items: center; gap: 4px; transform: translateY(-50%); }
+.row .gold .l { font-size: 12px; }
+.row .gold .v { font-size: 18px; color: {{ red }}; }
+.row .team-count { left: 454px; top: 40px; font-size: 20px; color: {{ grey }}; }
+.row .score { top: 55px; font-size: 44px; }
+
+/* 挂了命令的格子会被交互桥改成 position:relative, 这里按更高优先级钉回绝对定位 */
+.row .ch { position: absolute; top: {{ char_y }}px; width: {{ char_size }}px; height: {{ char_size }}px; }
+.row .ch .pic { position: absolute; inset: 0; background-size: 100% 100%; }
+.row .ch .pic.round { border-radius: 50%; }
+.row .ch .chain { position: absolute; right: 0; bottom: 0; width: {{ chain_size }}px; height: {{ chain_size }}px; }
+.row .ch .chain span { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 12px; }
+
+/* 队伍不足 3 人时的占位格 */
+.row .hole {
+    position: absolute; top: {{ char_y }}px; width: {{ char_size }}px; height: {{ char_size }}px;
+    background: rgba(60, 60, 60, .5); border: 1px solid rgba(120, 120, 120, .78);
+}
+.row .hole span { position: absolute; left: 50%; transform: translate(-50%, -50%); font-size: 12px; color: {{ grey }}; }
+
+.row .buff { top: {{ buff_y }}px; width: {{ buff_size }}px; height: {{ buff_size }}px; }
+.row .buff .plate { position: absolute; inset: 0; border-radius: 5px; background: rgba(0, 0, 0, .8); }
+.row .buff .pic { position: absolute; inset: 0; background-size: 100% 100%; }
+.row .team-score { top: 80px; font-size: 18px; }
+
+/* 满分档的水晶炫彩 */
+.crystal { background-image: {{ crystal }}; -webkit-background-clip: text; background-clip: text; color: transparent; }
+{% endblock %}
+
+{% block row %}
+{% if single_team %}
+<div class="gold"><span class="l">上场队伍角色金数:</span><span class="v">{{ row.gold }}</span></div>
+{% elif row.team_count %}
+<div class="t mm team-count">{{ row.team_count }}</div>
+{% endif %}
+<div class="t mm score{% if not row.score_color %} crystal{% endif %}"
+     style="left: {{ row.score_x }}px{% if row.score_color %}; color: {{ row.score_color }}{% endif %}">{{ row.score }}</div>
+{% for team in row.teams %}
+{% for c in team.chars %}
+<div class="ch icon-img" style="left: {{ c.x }}px"{% if c.cmd %} data-ww-cmd="{{ c.cmd }}"{% endif %}>
+    <div class="pic {{ c.cls }}{% if c.round %} round{% endif %}"></div>
+    {% if c.chain != -1 %}<div class="chain" style="background: {{ c.chain_color }}"><span>{{ c.chain }}</span></div>{% endif %}
+</div>
+{% endfor %}
+{% for x in team.holes %}
+<div class="hole" style="left: {{ x }}px">
+    <span style="top: {{ hole_first_y }}px">模版</span>
+    <span style="top: {{ hole_second_y }}px">角色</span>
+</div>
+{% endfor %}
+{% if team.buff %}
+<div class="buff icon-img" style="left: {{ team.buff_x }}px">
+    <div class="plate"></div>
+    <div class="pic {{ team.buff }}"></div>
+</div>
+{% endif %}
+{% if not single_team %}
+<div class="t mm team-score{% if not team.score_color %} crystal{% endif %}"
+     style="left: {{ team.score_x }}px{% if team.score_color %}; color: {{ team.score_color }}{% endif %}">{{ team.score }}</div>
+{% endif %}
+{% endfor %}
+{% endblock %}

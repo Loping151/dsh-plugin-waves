@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>鸣潮声骸仓库</title>
+<style>
+    @import url('{{ font_css_url }}');
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0; padding: 0;
+        background-color: #0f1115;
+        font-family: 'Source Han Sans CN', 'Noto Sans CJK JP', sans-serif;
+        width: 1600px;
+    }
+
+    .container {
+        position: relative;
+        width: 1600px; padding: 40px;
+        display: flex; flex-direction: column; align-items: center; gap: 35px;
+    }
+
+    .bg-layer {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 0; pointer-events: none;
+    }
+    .bg-layer::after {
+        content: ""; position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.2); z-index: 1;
+    }
+    .bg-image { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .user-card {
+        position: relative; z-index: 1; width: 100%;
+        background:
+            radial-gradient(circle at 100% 0%, rgba(212, 177, 99, 0.15) 0%, transparent 40%),
+            linear-gradient(180deg, rgba(30, 34, 42, 0.9) 0%, rgba(15, 17, 21, 0.95) 100%);
+        border-radius: 16px; padding: 25px 40px;
+        display: flex; align-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+    .user-card::before {
+        content: ""; position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-image:
+            linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 30px 30px;
+        mask-image: linear-gradient(to bottom, black, transparent 80%);
+        pointer-events: none; border-radius: 16px;
+    }
+    .deco-text {
+        position: absolute; top: 20px; right: 30px;
+        font-family: 'Oswald', sans-serif; font-size: 14px;
+        letter-spacing: 4px; color: rgba(255, 255, 255, 0.1);
+        font-weight: bold; pointer-events: none;
+    }
+    .avatar-container {
+        width: 100px; height: 100px; flex-shrink: 0;
+        margin-right: 30px; position: relative;
+        border-radius: 50%; border: 3px solid #2a2e35;
+        background-color: #222;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+    .avatar-ring {
+        position: absolute; top: -6px; left: -6px; right: -6px; bottom: -6px;
+        border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.05);
+        border-left: 2px solid #d4b163; transform: rotate(-45deg);
+        box-shadow: -2px 2px 10px rgba(212, 177, 99, 0.2);
+        pointer-events: none; z-index: 0;
+    }
+    .avatar { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; position: relative; z-index: 1; }
+    .user-info { flex: 1; display: flex; flex-direction: column; justify-content: center; z-index: 2; }
+    .user-row-1 {
+        display: flex; align-items: baseline; margin-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 8px; position: relative;
+    }
+    .user-row-1::after {
+        content: ""; position: absolute; bottom: -1px; left: 0;
+        width: 40px; height: 2px; background: #d4b163; box-shadow: 0 0 8px #d4b163;
+    }
+    .user-name { font-size: 42px; font-weight: 800; color: #fff; margin-right: 20px; text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); }
+    .user-uid {
+        font-family: 'JetBrains Mono', monospace; font-size: 20px; color: #d4b163;
+        background: rgba(0, 0, 0, 0.4); padding: 4px 12px; border-radius: 6px;
+        border: 1px solid rgba(212, 177, 99, 0.2); letter-spacing: 1.5px; font-weight: bold;
+    }
+    .page-badge {
+        margin-left: auto; font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: bold;
+        color: #d8d8d8; background: rgba(212, 177, 99, 0.15);
+        border: 1px solid rgba(212, 177, 99, 0.3); border-radius: 6px; padding: 4px 12px;
+    }
+    .user-stats { display: flex; gap: 40px; }
+    .stat-item { display: flex; flex-direction: column; }
+    .stat-value {
+        font-family: 'Oswald', sans-serif; font-size: 30px; font-weight: 700; line-height: 1.1;
+        background: linear-gradient(180deg, #fff 50%, #d4b163 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .stat-label { font-size: 12px; color: #6d717a; font-weight: bold; letter-spacing: 1px; margin-top: 2px; }
+
+    /* 卡格按 PIL 版坐标绝对定位, 行间 30px 交叠让角色头像压住上一行 */
+    .echo-grid { position: relative; z-index: 1; width: {{ grid_w }}px; height: {{ grid_h }}px; }
+    .echo-grid .echo-card { position: absolute; width: {{ card_w }}px; height: {{ card_h }}px; overflow: hidden; }
+    .echo-card i { display: block; background-size: 100% 100%; background-repeat: no-repeat; }
+    .card-bg, .card-title { position: absolute; left: 0; top: 50px; width: 350px; }
+    .card-bg { height: 550px; background-image: url('{{ sh_bg_url }}'); }
+    .card-title { height: 150px; }
+
+    .role-avatar { position: absolute; left: 230px; top: 10px; width: 180px; height: 180px; }
+
+    .phantom-icon { position: absolute; left: 20px; top: 70px; width: 100px; height: 100px; }
+    .phantom-icon .icon { width: 100%; height: 100%; }
+    .phantom-icon .fetter { position: absolute; top: 0; }
+
+    .phantom-name {
+        position: absolute; left: 130px; top: 90px; transform: translateY(-50%);
+        font-size: 28px; font-weight: bold; color: rgb(234, 183, 4);
+        white-space: nowrap; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+
+    .pill {
+        position: absolute; top: 108px; height: 30px; border-radius: 8px;
+        display: flex; align-items: center; font-size: 24px; color: #fff;
+    }
+    .pill.level { left: 128px; width: 84px; padding-left: 8px; background: rgba(0, 0, 0, 0.8); }
+    .pill.score { left: 228px; width: 92px; padding-left: 5px; background: rgba(186, 55, 42, 0.8); }
+
+    .cost { position: absolute; left: 128px; top: 140px; display: flex; }
+    .cost i { width: 30px; height: 30px; background-image: url('{{ promote_url }}'); }
+
+    .props {
+        position: absolute; left: 15px; top: {{ prop_top }}px; width: 335px;
+        display: flex; flex-direction: column; gap: {{ prop_gap }}px;
+    }
+    .prop { height: 40px; display: flex; align-items: center; }
+    .prop i { width: 40px; height: 40px; }
+    .prop-name { margin-left: 5px; font-size: 24px; white-space: nowrap; }
+    .prop-value { margin-left: auto; padding-right: 7px; font-size: 24px; }
+
+    .footer { position: relative; z-index: 1; text-align: center; width: 100%; opacity: 0.6; }
+    .footer img { max-width: 100%; }
+</style>
+<style>
+{% for url in assets %}.a{{ loop.index0 }} { background-image: url('{{ url }}'); }
+{% endfor %}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="bg-layer">
+        <img src="{{ bg_url }}" class="bg-image">
+    </div>
+
+    <div class="user-card">
+        <div class="deco-text">ECHO STORAGE</div>
+        <div class="avatar-container">
+            <div class="avatar-ring"></div>
+            <img src="{{ avatar_url }}" class="avatar">
+        </div>
+        <div class="user-info">
+            <div class="user-row-1">
+                <div class="user-name">{{ user_name }}</div>
+                <div class="user-uid">特征码 {{ user_id }}</div>
+                {% if page_text %}<div class="page-badge">{{ page_text }}</div>{% endif %}
+            </div>
+            <div class="user-stats">
+                {% if show_stats %}
+                <div class="stat-item">
+                    <div class="stat-value">Lv.{{ level }}</div>
+                    <div class="stat-label">账号等级</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">Lv.{{ world_level }}</div>
+                    <div class="stat-label">世界等级</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="echo-grid">
+        {% for echo in echoes %}
+        <div class="echo-card" style="left: {{ echo.left }}px; top: {{ echo.top }}px;"{% if echo.command %} data-ww-cmd="{{ echo.command }}"{% endif %}>
+            <i class="card-bg"></i>
+            <i class="card-title {{ echo.title_class }}"></i>
+            <i class="role-avatar {{ echo.role_class }}"></i>
+            <div class="phantom-icon">
+                <i class="icon {{ echo.icon_class }}"></i>
+                <i class="fetter {{ echo.fetter_class }}" style="left: {{ echo.fetter_left }}%; width: {{ echo.fetter_size }}%; height: {{ echo.fetter_size }}%;"></i>
+            </div>
+            <div class="phantom-name">{{ echo.name }}</div>
+            <div class="pill level">Lv.{{ echo.level }}</div>
+            <div class="pill score">{{ echo.score }}分</div>
+            <div class="cost">
+                {% for _ in range(echo.cost) %}<i></i>{% endfor %}
+            </div>
+            <div class="props">
+                {% for prop in echo.props %}
+                <div class="prop">
+                    <i class="{{ prop.icon_class }}"></i>
+                    <div class="prop-name" style="color: {{ prop.name_color }};">{{ prop.name }}</div>
+                    <div class="prop-value" style="color: {{ prop.value_color }};">{{ prop.value }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if footer_url %}
+    <div class="footer"><img src="{{ footer_url }}"></div>
+    {% endif %}
+</div>
+</body>
+</html>

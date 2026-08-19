@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>角色面板</title>
+<style>
+@import url('{{ font_css_url }}');
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #0f1115; }
+body {
+    width: 1200px;
+    font-family: 'Source Han Sans CN', 'Noto Sans CJK JP', 'Noto Sans CJK KR', sans-serif;
+    font-weight: 500;
+    color: #fff;
+}
+
+.container { position: relative; width: 1200px; padding-bottom: 70px; overflow: hidden; }
+.bg-layer { position: absolute; inset: 0; z-index: 0; }
+.bg-layer .bg-image { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bg-layer::after { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, .18); }
+.page { position: relative; z-index: 1; }
+
+/* 绝对定位文本: 锚点与画布版一致 */
+.t { position: absolute; white-space: nowrap; line-height: 1; }
+.a-lt { transform: none; }
+.a-lm { transform: translateY(-50%); }
+.a-mm { transform: translate(-50%, -50%); }
+.a-rm { transform: translate(-100%, -50%); }
+.a-mt { transform: translateX(-50%); }
+.a-rt { transform: translateX(-100%); }
+.ic { position: absolute; background-repeat: no-repeat; background-size: 100% 100%; }
+.bar, .card, .card .head, .rowbar, .grade-block .layer, .skills .item,
+.panel-prop, .weapon, .echo .title-bar, .chains .item .ic {
+    background-repeat: no-repeat; background-size: 100% 100%;
+}
+[data-ww-cmd] { cursor: pointer; }
+
+/* 头部 */
+.header {
+    position: relative; width: 1140px; margin: 24px 30px 6px;
+    background:
+        radial-gradient(circle at 100% 0%, rgba(212, 177, 99, .15) 0%, transparent 40%),
+        linear-gradient(180deg, rgba(30, 34, 42, .9) 0%, rgba(15, 17, 21, .95) 100%);
+    border-radius: 16px; padding: 22px 40px; display: flex; align-items: center;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-top: 1px solid rgba(255, 255, 255, .2);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, .5);
+}
+.header .deco { position: absolute; top: 18px; right: 30px; font-family: 'Oswald', sans-serif; font-size: 14px; letter-spacing: 4px; color: rgba(255, 255, 255, .1); font-weight: 700; }
+.avatar-box { position: relative; width: 110px; height: 110px; flex-shrink: 0; margin-right: 30px; border-radius: 50%; background: #222; border: 3px solid #2a2e35; box-shadow: 0 4px 10px rgba(0, 0, 0, .5); }
+.avatar-box .ring { position: absolute; inset: -6px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .05); border-left: 2px solid #d4b163; transform: rotate(-45deg); }
+.avatar-box .face { position: absolute; inset: 0; border-radius: 50%; background-size: cover; background-position: center; }
+.user-info { flex: 1; }
+.user-row { display: flex; align-items: baseline; padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, .08); position: relative; }
+.user-row::after { content: ""; position: absolute; bottom: -1px; left: 0; width: 40px; height: 2px; background: #d4b163; box-shadow: 0 0 8px #d4b163; }
+.user-name { font-size: 40px; font-weight: 800; margin-right: 20px; text-shadow: 0 4px 10px rgba(0, 0, 0, .5); }
+.user-uid { font-family: 'JetBrains Mono', monospace; font-size: 20px; color: #d4b163; background: rgba(0, 0, 0, .4); padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(212, 177, 99, .2); letter-spacing: 1.5px; font-weight: 700; }
+.user-stats { display: flex; gap: 40px; }
+.stat-item { display: flex; flex-direction: column; }
+.stat-value { font-family: 'Oswald', sans-serif; font-size: 30px; font-weight: 700; line-height: 1.1; background: linear-gradient(180deg, #fff 50%, #d4b163 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.stat-label { font-size: 12px; color: #6d717a; font-weight: 700; letter-spacing: 1px; margin-top: 2px; }
+
+/* 立绘 */
+/* 高度贴合实际内容: 立绘 1000, 有评分时右栏被下压, 武器块底到 1105 */
+.body { position: relative; }
+.pile { position: absolute; left: 25px; top: 0; width: 560px; height: 1000px; }
+.pile .art {
+    position: absolute; inset: 0; background-size: 560px 1000px; background-repeat: no-repeat;
+    -webkit-mask-size: 560px 1000px; -webkit-mask-repeat: no-repeat;
+}
+.pile .fg { position: absolute; inset: 0; background-size: 560px 1000px; background-repeat: no-repeat; }
+.pile .role-name { font-size: 50px; font-weight: 700; text-shadow: 2px 2px 6px rgba(0, 0, 0, .9); }
+.pile .hash { font-size: 12px; color: #b0b0b0; text-shadow: 1px 1px 0 rgba(80, 80, 80, .9); }
+
+/* 右侧 */
+.right { position: absolute; left: 570px; width: 600px; height: 1100px; }
+.panel-prop { position: absolute; left: 0; width: 600px; height: 500px; }
+.weapon { position: absolute; left: 0; width: 600px; height: 300px; }
+.weapon-name { position: absolute; display: flex; align-items: center; gap: 18px; transform: translateY(-50%); }
+.weapon-name .name { font-size: 40px; font-weight: 700; color: rgb(234, 183, 4); }
+.weapon-name .reson { font-size: 24px; padding: 3px 12px; border-radius: 7px; }
+
+/* 综合评分: 紧贴立绘下沿, 与画布版一样吃掉立绘底部的留白 */
+/* 画布版各块是互相压着的绝对坐标, 这里用负边距还原:
+   评分徽章 1080+shift / 技能 1150+offset+shift / 共鸣链 1080+jineng / 声骸 1320+jineng */
+.score-band { position: relative; height: 200px; margin-top: -170px; }
+.score-band .grade { position: absolute; left: 90px; top: 0; width: 200px; height: 200px; }
+.score-band .value { font-size: 40px; font-weight: 700; }
+.score-band .label { font-size: 40px; color: rgb(216, 216, 216); }
+
+/* 技能 / 共鸣链 */
+.skills { position: relative; height: 150px; margin-top: {{ -15 if score_band else -20 }}px; overflow: hidden; }
+.skills .bar { position: absolute; left: 0; top: 0; width: 1200px; height: 150px; }
+.skills .item { position: absolute; width: 400px; height: 200px; }
+.chains { position: relative; height: 300px; margin-top: -40px; overflow: hidden; }
+.chains .item { position: absolute; top: 0; width: 300px; height: 300px; }
+.chains .name { font-size: 20px; text-align: center; }
+.chains .name.small { font-size: 16px; }
+
+/* 声骸 */
+.echo { position: relative; margin-top: -60px; }
+.echo .banner { position: absolute; left: 0; top: 0; width: 1200px; height: 100px; }
+.echo .title-bar { position: absolute; left: 350px; top: 85px; width: 500px; height: 100px; }
+.bar { position: absolute; width: 400px; height: 100px; }
+.card { position: absolute; width: 350px; height: 550px; }
+.card .head { position: absolute; left: 0; top: 0; width: 350px; height: 150px; }
+.card .badge { position: absolute; height: 30px; border-radius: 8px; display: flex; align-items: center; }
+.grade-block { position: absolute; width: 350px; height: 500px; }
+.grade-block .layer { position: absolute; inset: 0; background-size: 350px 500px; background-repeat: no-repeat; }
+
+/* 伤害 / 优化 / 权重 */
+.rows { position: relative; }
+.rows .rowbar { position: absolute; left: 0; width: 1200px; height: 100px; }
+.rule-panel { position: absolute; left: 30px; width: 1140px; background: rgba(0, 0, 0, .43); border-radius: 20px; }
+.rule-panel .hr { position: absolute; left: 40px; right: 40px; height: 2px; background: rgba(255, 255, 255, .18); }
+.weight-table { position: relative; height: 900px; }
+.weight-table .plate { position: absolute; left: 10px; top: 10px; width: 1180px; height: 860px; background: rgba(0, 0, 0, .7); border-radius: 6px; }
+.weight-table .cell { position: absolute; width: 230px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.weight-table .cell.head { font-size: 24px; }
+
+.footer { position: relative; height: 60px; }
+.footer .mark { position: absolute; left: 300px; top: 10px; width: 600px; height: 40px; opacity: .85; }
+
+/* 点击桥接会给 [data-ww-cmd] 加 position:relative, 这里用更高特异性压回去 */
+.echo .card, .rows .rowbar { position: absolute; }
+
+{% for name, uri in icon_css %}.{{ name }}{background-image:url('{{ uri }}')}
+{% endfor %}
+</style>
+</head>
+<body>
+{% macro T(x, y, text, color='#ffffff', size=24, anchor='lm', cls='', weight=500) -%}
+<div class="t a-{{ anchor }} {{ cls }}" style="left:{{ x }}px;top:{{ y }}px;color:{{ color }};font-size:{{ size }}px;font-weight:{{ weight }}">{{ text }}</div>
+{%- endmacro %}
+
+{% macro STATBAR(row, even_cls, odd_cls, x, y) -%}
+<div class="bar {{ odd_cls if row.odd else even_cls }}" style="left:{{ x }}px;top:{{ y }}px">
+    <div class="ic {{ row.icon }}" style="left:20px;top:32px;width:40px;height:40px"></div>
+    {{ T(70, 50, row.name, row.color, 24) }}
+    {{ T(343, 50, row.value, row.color, 24, 'rm') }}
+</div>
+{%- endmacro %}
+
+{% macro ECHOCARD(card, x, y, cmd) -%}
+<div class="card {{ card.bg }}" style="left:{{ x }}px;top:{{ y }}px;background-size:350px 550px;background-repeat:no-repeat"
+     {% if cmd %}data-ww-cmd="{{ cmd }}"{% endif %}>
+    <div class="head {{ card.title }}" style="background-size:350px 150px;background-repeat:no-repeat"></div>
+    {% if card.icon %}<div class="ic {{ card.icon }}" style="left:20px;top:20px;width:100px;height:100px"></div>{% endif %}
+    {{ T(130, 40, card.name, 'rgb(234,183,4)', 28, 'lm', '', 700) }}
+    {% if card.badge %}
+    <div class="badge" style="left:128px;top:58px;width:{{ 175 if card.wide_score else 150 }}px;background:rgba(0,0,0,.8);justify-content:center">
+        <span style="font-size:18px">{{ card.badge }}</span>
+    </div>
+    {% else %}
+    <div class="badge" style="left:128px;top:58px;width:84px;background:rgba(0,0,0,.8);padding-left:8px">
+        <span style="font-size:24px">{{ card.level }}</span>
+    </div>
+    <div class="badge" style="left:223px;top:58px;width:{{ 120 if card.wide_score else 100 }}px;background:rgba(186,55,42,.8);justify-content:center">
+        <span style="font-size:24px">{{ card.score }}</span>
+    </div>
+    {% endif %}
+    {% for i in range(card.cost) %}
+    <div class="ic {{ card.promote }}" style="left:{{ 128 + 30 * i }}px;top:90px;width:30px;height:30px"></div>
+    {% endfor %}
+    {% for prop in card.props %}
+        {% if prop.entry is defined %}
+            {{ T(15, 187 + loop.index0 * 55, prop.name, prop.name_color, 24) }}
+            {{ T(273, 187 + loop.index0 * 55, prop.value, prop.value_color, 24, 'rm') }}
+            {{ T(343, 191 + loop.index0 * 55, prop.entry, prop.entry_color, 18, 'rm') }}
+        {% else %}
+            <div class="ic {{ prop.icon }}" style="left:15px;top:{{ 167 + loop.index0 * 55 }}px;width:40px;height:40px"></div>
+            {{ T(60, 187 + loop.index0 * 55, prop.name, prop.name_color, 24) }}
+            {{ T(343, 187 + loop.index0 * 55, prop.value, prop.value_color, 24, 'rm') }}
+        {% endif %}
+    {% endfor %}
+    {% if card.max_line %}{{ T(343, 576, card.max_line, 'rgb(234,183,4)', 18, 'rm') }}{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro GRADE(grade, x, y) -%}
+<div class="grade-block" style="left:{{ x }}px;top:{{ y }}px">
+    <div class="layer {{ grade.bg }}"></div>
+    {% if grade.fg %}<div class="layer {{ grade.fg }}"></div>{% endif %}
+    {% if grade.empty %}
+        {{ T(180, 130, grade.top, '#ffffff', 40, 'mm') }}
+        {{ T(180, 380, grade.value, '#ffffff', 40, 'mm') }}
+    {% else %}
+        {{ T(180, 260, grade.top, 'rgb(216,216,216)', 40, 'mm') }}
+        {{ T(180, 380, grade.value, '#ffffff', 40, 'mm', '', 700) }}
+        {{ T(180, 440, grade.bottom, 'rgb(216,216,216)', 40, 'mm') }}
+    {% endif %}
+</div>
+{%- endmacro %}
+
+{% macro DMGHEAD(bar, head, y) -%}
+<div class="rowbar {{ bar }}" style="top:{{ y }}px">
+    {{ T(400, 50, head.name, 'rgb(234,183,4)', 24, 'rm') }}
+    {{ T(700, 50, head.crit, 'rgb(234,183,4)', 24, 'mm') }}
+    {{ T(1000, 50, head.expected, 'rgb(234,183,4)', 24, 'mm') }}
+</div>
+{%- endmacro %}
+
+{% macro DMGROW(bar, row, y) -%}
+<div class="rowbar {{ bar }}" style="top:{{ y }}px" {% if row.cmd %}data-ww-cmd="{{ row.cmd }}"{% endif %}>
+    {{ T(400, 50, row.name, '#ffffff', 24, 'rm') }}
+    {% if row.single %}
+        {{ T(850, 50, row.value if row.value is defined else row.expected, 'rgb(234,183,4)' if row.gold else '#ffffff', 24, 'mm') }}
+    {% else %}
+        {{ T(700, 50, row.crit, '#ffffff', 24, 'mm') }}
+        {{ T(1000, 50, row.expected, '#ffffff', 24, 'mm') }}
+    {% endif %}
+</div>
+{%- endmacro %}
+
+<div class="container">
+    <div class="bg-layer"><img class="bg-image" src="{{ bg }}"></div>
+    <div class="page">
+
+    <div class="header">
+        <div class="deco">ROLE PANEL</div>
+        <div class="avatar-box">
+            <div class="ring"></div>
+            <div class="face {{ header.avatar }}"></div>
+        </div>
+        <div class="user-info">
+            <div class="user-row">
+                <div class="user-name">{{ header.name }}</div>
+                <div class="user-uid">{{ header.uid_label }} {{ header.uid }}</div>
+            </div>
+            {% if header.show_stats %}
+            <div class="user-stats">
+                <div class="stat-item">
+                    <div class="stat-value">Lv.{{ header.level }}</div>
+                    <div class="stat-label">{{ header.level_label }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">Lv.{{ header.world_level }}</div>
+                    <div class="stat-label">{{ header.world_label }}</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% set shift = 25 if score_band else 0 %}
+    <div class="body" style="height:{{ 1105 if score_band else 1000 }}px">
+        <div class="pile">
+            <div class="art {{ pile.image }}" style="-webkit-mask-image:url('{{ mask_uri }}')"></div>
+            <div class="fg {{ pile.fg }}"></div>
+            <div class="ic {{ pile.attribute }}" style="left:434px;top:112px;width:50px;height:50px"></div>
+            <div class="ic {{ pile.weapon_type }}" style="left:439px;top:182px;width:40px;height:40px"></div>
+            <div class="t a-mm role-name" style="left:285px;top:867px">{{ pile.name }}</div>
+            {% if pile.hash_id %}<div class="t a-rm hash" style="left:500px;top:100px">{{ pile.hash_id }}</div>{% endif %}
+        </div>
+
+        {% if right %}
+        {% set prop_y = 100 if score_band else 80 %}
+        {% set weapon_banner_y = 620 if score_band else 550 %}
+        {% set weapon_y = 750 if score_band else 620 %}
+        <div class="right" style="top:{{ 30 + shift }}px">
+            <div class="ic {{ right.banner_top }}" style="left:-9px;top:0;width:600px;height:100px"></div>
+            <div class="panel-prop {{ right.prop_bg }}" style="top:{{ prop_y }}px;background-size:600px 500px;background-repeat:no-repeat">
+                {% if right.diff %}
+                    {% for row in right.props %}
+                        {% set y = 40 + loop.index0 * 55 %}
+                        <div class="ic {{ row.icon }}" style="left:65px;top:{{ y }}px;width:40px;height:40px"></div>
+                        {{ T(120, y + 18, row.name, '#ffffff', 24) }}
+                        {{ T(480, y + 18, row.value, '#ffffff', 20, 'rm') }}
+                        {% if row.delta %}{{ T(578, y + 18, row.delta, row.delta_color, 20, 'rm') }}{% endif %}
+                    {% endfor %}
+                {% else %}
+                    {% for row in right.props %}
+                        {% set i = loop.index0 %}
+                        {% if i < 4 %}
+                            {% set x = 251 * (i % 2) %}
+                            {% set y = 40 + (i // 2) * 55 %}
+                            <div class="ic {{ row.icon }}" style="left:{{ 60 + x }}px;top:{{ y }}px;width:40px;height:40px"></div>
+                            {{ T(115 + x, y + 18, row.name, row.color, 24) }}
+                            {{ T(530 - 251 * ((i + 1) % 2), y + 18, row.value, row.color, 24, 'rm') }}
+                        {% else %}
+                            {% set y = 40 + (i - 2) * 55 %}
+                            <div class="ic {{ row.icon }}" style="left:60px;top:{{ y }}px;width:40px;height:40px"></div>
+                            {{ T(115, y + 18, row.name, row.color, 24) }}
+                            {{ T(530, y + 18, row.value, row.color, 24, 'rm') }}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="ic {{ right.banner_weapon }}" style="left:-9px;top:{{ weapon_banner_y }}px;width:600px;height:100px"></div>
+            {% set w = right.weapon %}
+            <div class="weapon {{ w.bg }}"{% if w.cmd %} data-ww-cmd="{{ w.cmd }}"{% endif %} style="top:{{ weapon_y }}px;background-size:600px 300px;background-repeat:no-repeat">
+                <div class="ic {{ w.icon }}" style="left:45px;top:0;width:140px;height:140px"></div>
+                <div class="weapon-name" style="left:200px;top:30px">
+                    <span class="name">{{ w.name }}</span>
+                    <span class="reson" style="background:{{ w.reson_color }}">{{ w.reson }}</span>
+                </div>
+                {{ T(203, 75, w.level, '#ffffff', 30) }}
+                {% for i in range(w.breach) %}
+                <div class="ic {{ w.promote }}" style="left:{{ 200 + 40 * i }}px;top:100px;width:40px;height:40px"></div>
+                {% endfor %}
+                {% for stat in w.stats %}
+                    {% set y = 187 + loop.index0 * 50 %}
+                    <div class="ic {{ stat.icon }}" style="left:65px;top:{{ y }}px;width:40px;height:40px"></div>
+                    {{ T(115 if w.has_branch else 130, y + 20, stat.name, '#ffffff', 30) }}
+                    {{ T(415 if w.has_branch else 500, y + 20, stat.value, '#ffffff', 30, 'rm') }}
+                {% endfor %}
+                {% if w.branch_icon %}
+                <div class="ic {{ w.branch_icon }}" style="left:400px;top:182px;width:100px;height:100px"></div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if stat_column %}
+        <div class="right" style="left:580px;top:55px;width:500px">
+            {% for group in stat_column.groups %}
+                {% set gi = loop.index0 %}
+                {% for row in group %}
+                <div style="position:absolute;left:0;top:{{ (loop.index0 + gi * 4) * 70 }}px;transform:scale(1.25);transform-origin:top left">
+                    {{ STATBAR(row, stat_column.bar_even, stat_column.bar_odd, 0, 0) }}
+                </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if side_strip %}
+        <div class="ic {{ side_strip }}" style="left:1075px;top:50px;width:70px;height:1000px"></div>
+        {% endif %}
+    </div>
+
+    {% if score_band %}
+    <div class="score-band" {% if score_band.cmd %}data-ww-cmd="{{ score_band.cmd }}"{% endif %}>
+        <div class="ic grade {{ score_band.icon }}"></div>
+        <div class="t a-mm value" style="left:400px;top:60px">{{ score_band.value }}</div>
+        <div class="t a-mm label" style="left:400px;top:130px">{{ score_band.label }}</div>
+    </div>
+    {% endif %}
+
+    {% if skills %}
+    <div class="skills"{% if skills.cmd %} data-ww-cmd="{{ skills.cmd }}"{% endif %}>
+        <div class="ic bar {{ skills.bar }}"></div>
+        {% for item in skills.entries %}
+        <div class="item {{ skills.bg }}" style="left:{{ 20 + loop.index0 * 215 }}px;top:-20px;background-size:400px 200px;background-repeat:no-repeat">
+            <div class="ic {{ item.icon }}" style="left:57px;top:65px;width:70px;height:70px"></div>
+            {{ T(150, 83, item.type, '#ffffff', 25) }}
+            {{ T(150, 113, item.level, '#ffffff', 25) }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if chains and chains.items %}
+    <div class="chains"{% if chains.cmd %} data-ww-cmd="{{ chains.cmd }}"{% endif %}>
+        {% for chain in chains['items'] %}
+        <div class="item" style="left:{{ loop.index0 * 190 }}px">
+            <div class="ic {{ chain.image }}" style="inset:0;width:300px;height:300px"></div>
+            <div class="t a-mm name {{ 'small' if chain.small }}" style="left:147px;top:230px">{{ chain.name }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if echo %}
+    <div class="echo" style="height:{{ echo.height }}px">
+        <div class="ic banner {{ echo.banner }}"></div>
+        {% if echo.change_command %}{{ T(50, 90, echo.change_command, 'rgb(234,183,4)', 18) }}{% endif %}
+        {% if echo.title %}
+        <div class="title-bar {{ echo.title_bar }}" style="background-size:500px 100px;background-repeat:no-repeat">
+            {{ T(250, 50, echo.title, 'rgb(234,183,4)', 30, 'mm', '', 700) }}
+        </div>
+        {% endif %}
+
+        {% for group in echo.stat_groups %}
+            {% set gi = loop.index0 %}
+            {% for row in group %}
+                {{ STATBAR(row, echo.bar_even, echo.bar_odd, 40 + gi * 370, 100 + loop.index0 * 50) }}
+            {% endfor %}
+        {% endfor %}
+        {% if echo.template_name %}
+        <div class="bar {{ echo.bar_odd }}" style="left:780px;top:45px">
+            {{ T(20, 50, echo.template_label, '#ffffff', 24) }}
+            {{ T(350, 50, echo.template_name, 'rgb(255,255,0)', 24, 'rm') }}
+        </div>
+        {% endif %}
+
+        {% if echo.grade %}{{ GRADE(echo.grade, 30, echo.card_top) }}{% endif %}
+        {% for card in echo.cards %}
+            {{ ECHOCARD(card, 30 + ((loop.index0 + 1) % 3) * 385, echo.card_top + ((loop.index0 + 1) // 3) * echo.card_gap, card.cmd or echo.card_cmd) }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if damage %}
+    <div class="rows" style="height:{{ 60 * (damage.rows | length + 1) + 50 }}px">
+        {{ DMGHEAD(damage.bar_odd, damage.head, 10) }}
+        {% for row in damage.rows %}
+            {{ DMGROW(damage.bar_even if loop.index0 % 2 == 0 else damage.bar_odd, row, 10 + (loop.index0 + 1) * 60) }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if single_damage %}
+    <div class="rows" style="height:{{ 190 + 60 * (single_damage.buffs | length) + 40 }}px">
+        {{ DMGHEAD(single_damage.bar_odd, single_damage.head, 10) }}
+        {{ DMGROW(single_damage.bar_even, single_damage.row, 70) }}
+        <div class="rowbar {{ single_damage.bar_odd }}" style="top:130px">
+            {{ T(600, 50, single_damage.buff_title, '#ffffff', 24, 'mm') }}
+        </div>
+        {% for buff in single_damage.buffs %}
+        <div class="rowbar {{ single_damage.bar_even if loop.index0 % 2 == 0 else single_damage.bar_odd }}" style="top:{{ 190 + loop.index0 * 60 }}px">
+            {{ T(400, 50, buff.name, '#ffffff', 24, 'rm') }}
+            {{ T(800, 50, buff.value, '#ffffff', 24, 'mm') }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if optimize %}
+    {% set rule_h = 58 + 14 + (optimize.rule_lines | length) * 40 + 18 %}
+    <div class="rows" style="height:{{ 60 * (optimize.rows | length + 1) + 24 + rule_h + 60 }}px">
+        <div class="rowbar {{ optimize.bar_odd }}" style="top:0">
+            {{ T(600, 50, optimize.title, 'rgb(234,183,4)', 30, 'mm', '', 700) }}
+        </div>
+        {% for row in optimize.rows %}
+        <div class="rowbar {{ optimize.bar_even if loop.index0 % 2 == 0 else optimize.bar_odd }}" style="top:{{ (loop.index0 + 1) * 60 }}px">
+            {{ T(300, 50, row.label, '#ffffff', 24, 'rm') }}
+            {{ T(700, 50, row.text, '#ffffff', 24, 'mm') }}
+        </div>
+        {% endfor %}
+        <div class="rule-panel" style="top:{{ 60 * (optimize.rows | length) + 100 + 24 }}px;height:{{ rule_h }}px">
+            {{ T(40, 33, optimize.rule_title, 'rgb(234,183,4)', 28, 'lm', '', 700) }}
+            {{ T(1100, 33, optimize.rule_hint, 'rgb(234,183,4)', 28, 'rm') }}
+            <div class="hr" style="top:58px"></div>
+            {% for line in optimize.rule_lines %}
+            {{ T(40, 92 + loop.index0 * 40, line, 'rgb(216,216,216)', 22) }}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if weight_tables %}
+        {% for table in weight_tables %}
+        <div class="weight-table">
+            <div class="plate"></div>
+            <div class="t a-lt" style="left:25px;top:20px;color:rgb(234,183,4);font-size:36px;font-weight:700">{{ table.title }}</div>
+            {% for row in table.rows %}
+                {% set y = 80 + loop.index0 * 40 %}
+                {% for cell in row.cells %}
+                <div class="cell {{ 'head' if row.head }}" style="left:{{ 25 + loop.index0 * 230 }}px;top:{{ y }}px;color:{{ cell.color }};background:{{ 'rgba(255,255,255,.12)' if row.odd and not row.head else 'rgba(0,0,0,.35)' }}">{{ cell.text }}</div>
+                {% endfor %}
+            {% endfor %}
+            {% for note in table.notes %}
+            <div class="t a-lt" style="left:25px;top:{{ 750 + loop.index0 * 50 }}px;font-size:24px">{{ note }}</div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="footer"><div class="ic mark {{ footer }}"></div></div>
+    </div>
+</div>
+</body>
+</html>

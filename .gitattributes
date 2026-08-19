@@ -1,0 +1,2 @@
+# PowerShell 5.1 只按 UTF-16 LE 正确解析中文; 仓库内仍存 UTF-8
+install.ps1 text working-tree-encoding=UTF-16LE-BOM eol=crlf

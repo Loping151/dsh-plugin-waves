@@ -1,0 +1,38 @@
+{% extends "rank_board.html" %}
+
+{% block style %}
+/* ---------------- 行内: 限定金数 / 两个半场 / 总分 ---------------- */
+.row .gold { left: 210px; top: 40px; font-size: 18px; }
+.row .score { left: 1140px; top: 55px; font-size: 44px; }
+
+/* 挂了命令的格子会被交互桥改成 position:relative, 这里按更高优先级钉回绝对定位 */
+.row .ch { position: absolute; top: 20px; width: 45px; height: 45px; overflow: hidden; }
+.row .ch .pic { position: absolute; inset: 0; background-size: 100% 100%; }
+.row .ch .chain { position: absolute; left: 30px; top: 30px; width: 20px; height: 20px; }
+.row .ch .chain span { position: absolute; left: 8px; top: 8px; transform: translate(-50%, -50%); font-size: 12px; }
+
+.row .buff { top: 15px; width: 50px; height: 50px; }
+.row .buff .plate { position: absolute; inset: 0; border-radius: 5px; background: rgba(0, 0, 0, .8); }
+.row .buff .strip { position: absolute; left: 0; top: 45px; width: 50px; height: 5px; }
+.row .buff .pic { position: absolute; inset: 0; background-size: 100% 100%; }
+.row .half-score { top: 80px; font-size: 20px; }
+{% endblock %}
+
+{% block row %}
+<div class="t gold">{{ row.gold }}</div>
+<div class="t mm score" style="color: {{ row.score_color }}">{{ row.score }}</div>
+{% for half in row.halves %}
+{% for c in half.chars %}
+<div class="ch icon-img" style="left: {{ c.x }}px"{% if c.cmd %} data-ww-cmd="{{ c.cmd }}"{% endif %}>
+    <div class="pic {{ c.cls }}"></div>
+    {% if c.chain != -1 %}<div class="chain" style="background: {{ c.chain_color }}"><span>{{ c.chain }}</span></div>{% endif %}
+</div>
+{% endfor %}
+<div class="buff icon-img" style="left: {{ half.buff_x }}px">
+    <div class="plate"></div>
+    <div class="strip" style="background: {{ half.buff_color }}"></div>
+    {% if half.buff %}<div class="pic {{ half.buff }}"></div>{% endif %}
+</div>
+<div class="t mm half-score" style="left: {{ half.score_x }}px; color: {{ half.score_color }}">{{ half.score }}</div>
+{% endfor %}
+{% endblock %}

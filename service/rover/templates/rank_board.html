@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>{{ header.title }}</title>
+<style>
+@import url('{{ font_css_url }}');
+
+* { box-sizing: border-box; }
+body { margin: 0; background: #0f1115; }
+
+.container {
+    position: relative;
+    width: {{ card_w }}px;
+    padding-bottom: 40px;
+    background-image: url('{{ bg }}');
+    background-size: cover;
+    background-position: center;
+    font-family: 'Source Han Sans CN', 'Noto Sans CJK JP', 'Noto Sans CJK KR', sans-serif;
+    font-weight: 700;
+    color: #fff;
+    overflow: hidden;
+}
+
+/* 文本按 PIL 锚点定位: lm 左中 / mm 中中 / rm 右中 */
+.t { position: absolute; white-space: nowrap; line-height: 1; transform: translateY(-50%); }
+.t.mm { transform: translate(-50%, -50%); }
+.t.rm { transform: translate(-100%, -50%); }
+
+/* ---------------- 头部: 标题底图 + 图标, 底部渐隐 ---------------- */
+.header { position: relative; width: 100%; height: 510px; }
+.header .art {
+    position: absolute; left: 0; top: 0; width: {{ card_w }}px; height: 500px; overflow: hidden;
+    -webkit-mask-image: {{ header.mask }}; mask-image: {{ header.mask }};
+}
+.header .bg { position: absolute; left: 0; top: 0; width: {{ card_w }}px; height: 500px; }
+.header .icon { position: absolute; left: 60px; top: 240px; width: 128px; height: 128px; }
+.header .title { left: 220px; top: 290px; font-size: 58px; }
+.header .subs {
+    position: absolute; left: 225px; top: 360px; transform: translateY(-50%);
+    display: flex; gap: 16px; font-size: 20px; color: {{ grey }}; white-space: nowrap;
+}
+
+/* ---------------- 排行行: 底板 110 高, 行距 120 ---------------- */
+.row {
+    position: relative; width: {{ card_w }}px; height: 110px; margin-bottom: 10px;
+    background: url('{{ bar }}') no-repeat left top; background-size: {{ card_w }}px 110px;
+    overflow: hidden;
+}
+.row .medal { left: 37px; top: 27px; width: 55px; height: 55px; }
+.row .box {
+    position: absolute; top: 30px; height: 50px; border-radius: 8px;
+    background: rgba(54, 54, 54, .9); font-size: 34px; line-height: 50px; text-align: center;
+}
+.row .avatar { position: absolute; left: 100px; top: 0; width: 180px; height: 180px; }
+.row .name { left: 210px; top: 75px; }
+.row .uid { top: 40px; font-size: 20px; }
+
+/* bot 主人徽章: 底图以 208x39 中心为锚点, 名字压在中间 */
+.badge { position: absolute; width: 208px; height: 39px; }
+.badge .plate { position: absolute; left: 4px; top: 5px; width: 201px; height: 31px; border-radius: 6px; background: rgba(54, 54, 54, .6); }
+.badge .bg { left: 104px; top: 19px; transform: translate(-50%, -50%); }
+.badge .txt { position: absolute; left: 104px; top: 20px; transform: translate(-50%, -50%); font-size: 18px; white-space: nowrap; }
+
+.icon-img { position: absolute; background-size: 100% 100%; background-repeat: no-repeat; }
+{% block style %}{% endblock %}
+{% for a in assets %}.{{ a.cls }} { background-image: url('{{ a.uri }}'); }
+{% endfor %}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="art">
+            <img class="bg" src="{{ header.art }}">
+            <img class="icon" src="{{ header.icon }}">
+            <div class="t title">{{ header.title }}</div>
+            <div class="subs">{% for s in header.subs %}<span>{{ s }}</span>{% endfor %}</div>
+        </div>
+    </div>
+
+    {% block board %}{% endblock %}
+
+    {% for row in rows %}
+    <div class="row">
+        {% if row.medal %}
+        <div class="medal icon-img {{ row.medal }}"></div>
+        {% else %}
+        <div class="box" style="left: {{ row.box.left }}px; width: {{ row.box.w }}px">{{ row.box.text }}</div>
+        {% endif %}
+        <img class="avatar" src="{{ row.avatar }}">
+        <div class="t name" style="font-size: {{ row.name_size }}px">{{ row.name }}</div>
+        <div class="t uid" style="left: {{ row.uid_x }}px; color: {{ row.uid_color }}">{{ row.uid }}</div>
+        {% if row.badge %}
+        <div class="badge" style="left: {{ row.badge.x }}px; top: {{ row.badge.y }}px">
+            {% if row.badge.cls %}
+            <div class="bg icon-img {{ row.badge.cls }}" style="width: {{ row.badge.w }}px; height: {{ row.badge.h }}px"></div>
+            {% else %}<div class="plate"></div>{% endif %}
+            <div class="txt">{{ row.badge.name }}</div>
+        </div>
+        {% endif %}
+        {% block row scoped %}{% endblock %}
+    </div>
+    {% endfor %}
+</div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+# 上游插件由 tools/update_plugins.py 拉取
+service/plugins/*
+!service/plugins/__init__.py
+# 运行时数据: 配置、数据库、素材、渲染缓存
+service/data/
+DESIGN.md
+# 伤害计算构建
+*.so
+*.pyd
+*.dll
+*.dylib
+**/waves_build/

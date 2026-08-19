@@ -1,0 +1,8 @@
+- insert:
+    - id: waves-plugin
+      name: 'dsh-plugin-waves'
+      config:
+        port: 9777
+        autoStart: true
+        # 设为 false 则模型看不到本插件, 只能用 /ww 命令(省上下文)
+        exposeToModel: true

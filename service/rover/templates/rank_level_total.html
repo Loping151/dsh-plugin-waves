@@ -1,0 +1,57 @@
+{% extends "rank_board.html" %}
+
+{% block style %}
+/* ---------------- 排行说明 ---------------- */
+.cond { position: relative; width: 100%; height: 130px; }
+.cond .panel {
+    position: absolute; left: 20px; top: 20px; width: {{ card_w - 60 }}px; height: 90px;
+    border-radius: 8px; background: rgba(36, 36, 41, .9);
+}
+.cond .accent { position: absolute; left: 20px; top: 20px; width: {{ card_w - 60 }}px; height: 7px; background: rgb(203, 161, 95); }
+.cond .label { left: 40px; top: 60px; font-size: 28px; color: {{ grey }}; }
+.cond .line { left: 185px; font-size: 20px; color: {{ gold }}; }
+.cond .notes { left: 1260px; top: 100px; font-size: 16px; color: {{ gold }}; }
+
+/* ---------------- 行内: 角色数 / 前十角色 / 最高分 / 总分 ---------------- */
+.row .count-l { left: 210px; top: 45px; font-size: 18px; }
+.row .count-v { left: 280px; top: 45px; font-size: 20px; color: {{ red }}; }
+/* 挂了命令的格子会被交互桥改成 position:relative, 这里按更高优先级钉回绝对定位 */
+.row .ch {
+    position: absolute; top: 35px; width: 40px; height: 40px;
+    -webkit-mask-image: {{ char_mask }}; mask-image: {{ char_mask }};
+}
+.row .cs {
+    position: absolute; top: 77px; width: 40px; transform: translateY(-50%);
+    text-align: center; font-size: 12px; color: {{ gold }};
+}
+.row .best-v { left: 1080px; top: 45px; font-size: 30px; color: lightgreen; }
+.row .best-l { left: 1080px; top: 75px; font-size: 16px; }
+.row .total-v { left: 1180px; top: 45px; font-size: 34px; }
+.row .total-l { left: 1180px; top: 75px; font-size: 16px; }
+{% endblock %}
+
+{% block board %}
+<div class="cond">
+    <div class="panel"></div>
+    <div class="accent"></div>
+    <div class="t label">排行说明</div>
+    <div class="t line" style="top: 50px">{{ cond.line1 }}</div>
+    <div class="t line" style="top: 85px">{{ cond.line2 }}</div>
+    <div class="t rm notes">{{ cond.notes }}</div>
+</div>
+{% endblock %}
+
+{% block row %}
+<div class="t count-l">角色数:</div>
+<div class="t count-v">{{ row.count }}</div>
+{% for c in row.chars %}
+<div class="ch icon-img {{ c.cls }}" style="left: {{ c.x }}px"{% if c.cmd %} data-ww-cmd="{{ c.cmd }}"{% endif %}></div>
+<div class="cs" style="left: {{ c.x }}px">{{ c.score }}</div>
+{% endfor %}
+{% if row.best %}
+<div class="t mm best-v">{{ row.best }}</div>
+<div class="t mm best-l">最高分</div>
+{% endif %}
+<div class="t mm total-v">{{ row.total }}</div>
+<div class="t mm total-l">总分</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{
+  "name": "dsh-plugin-waves",
+  "version": "0.0.1",
+  "license": "GPL-3.0",
+  "private": true,
+  "type": "module",
+  "description": "鸣潮查询、面板、排行、签到与声骸评分",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "install.sh",
+    "install.ps1",
+    "ICON.png",
+    "service/rover",
+    "service/tools",
+    "service/ai",
+    "service/pyproject.toml",
+    "service/ICON.png",
+    "service/plugins/__init__.py"
+  ],
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": { "platform": "web" }
+  }
+}

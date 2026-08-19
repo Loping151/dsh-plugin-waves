@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>鸣潮练度统计</title>
+<style>
+@import url('{{ font_css_url }}');
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #0f1115; }
+body {
+    width: {{ page_w }}px;
+    font-family: 'Source Han Sans CN', 'Noto Sans CJK JP', 'Noto Sans CJK KR', sans-serif;
+    font-weight: 500;
+    color: #fff;
+}
+
+.container { position: relative; width: {{ page_w }}px; padding: 40px; overflow: hidden; }
+.bg-layer { position: absolute; inset: 0; z-index: 0; }
+.bg-layer .bg-image { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bg-layer::after { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, .2); }
+.page { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 30px; }
+
+/* 绝对定位文本: 锚点与画布版一致 */
+.t { position: absolute; white-space: nowrap; line-height: 1; transform: translateY(-50%); }
+.t.mm { transform: translate(-50%, -50%); }
+.ic { position: absolute; display: block; background-repeat: no-repeat; background-size: 100% 100%; }
+
+/* 头部 */
+.header {
+    position: relative; width: 100%;
+    background:
+        radial-gradient(circle at 100% 0%, rgba(212, 177, 99, .15) 0%, transparent 40%),
+        linear-gradient(180deg, rgba(30, 34, 42, .9) 0%, rgba(15, 17, 21, .95) 100%);
+    border-radius: 16px; padding: 22px 40px; display: flex; align-items: center;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-top: 1px solid rgba(255, 255, 255, .2);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, .5);
+}
+.header .deco { position: absolute; top: 18px; right: 30px; font-family: 'Oswald', sans-serif; font-size: 14px; letter-spacing: 4px; color: rgba(255, 255, 255, .1); font-weight: 700; }
+.avatar-box { position: relative; width: 110px; height: 110px; flex-shrink: 0; margin-right: 30px; border-radius: 50%; background: #222; border: 3px solid #2a2e35; box-shadow: 0 4px 10px rgba(0, 0, 0, .5); }
+.avatar-box .ring { position: absolute; inset: -6px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .05); border-left: 2px solid #d4b163; transform: rotate(-45deg); }
+.avatar-box .face { position: absolute; inset: 0; border-radius: 50%; background-size: cover; background-position: center; }
+.user-info { flex: 1; }
+.user-row { display: flex; align-items: baseline; padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, .08); position: relative; }
+.user-row::after { content: ""; position: absolute; bottom: -1px; left: 0; width: 40px; height: 2px; background: #d4b163; box-shadow: 0 0 8px #d4b163; }
+.user-name { font-size: 40px; font-weight: 800; margin-right: 20px; text-shadow: 0 4px 10px rgba(0, 0, 0, .5); }
+.user-uid { font-family: 'JetBrains Mono', monospace; font-size: 20px; color: #d4b163; background: rgba(0, 0, 0, .4); padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(212, 177, 99, .2); letter-spacing: 1.5px; font-weight: 700; }
+.user-stats { display: flex; gap: 40px; }
+.stat-item { display: flex; flex-direction: column; }
+.stat-value { font-family: 'Oswald', sans-serif; font-size: 30px; font-weight: 700; line-height: 1.1; background: linear-gradient(180deg, #fff 50%, #d4b163 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.stat-label { font-size: 12px; color: #6d717a; font-weight: 700; letter-spacing: 1px; margin-top: 2px; }
+
+/* 统计条: 底图与四项坐标照画布版 */
+.stat-plate { position: relative; width: 1000px; height: 260px; background-repeat: no-repeat; background-size: 100% 100%; }
+.stat-plate .stat-v { font-size: 40px; }
+.stat-plate .stat-l { font-size: 20px; }
+
+/* 角色网格: 单列纵排, 角色多时左右两列 */
+.grid { position: relative; width: {{ grid_w }}px; height: {{ grid_h }}px; }
+/* 点击桥接会给 [data-ww-cmd] 加 position:relative, 用更高特异性压回去 */
+.grid .row { position: absolute; width: {{ bar_w }}px; height: {{ bar_h }}px; overflow: hidden; background-repeat: no-repeat; background-size: 100% 100%; }
+.row .avatar { left: 60px; top: 0; width: 180px; height: 180px; }
+.row .attr { left: 170px; top: 20px; width: 40px; height: 40px; }
+.row .lv { left: 180px; top: 83px; font-size: 22px; color: {{ grey }}; }
+.row .chain { position: absolute; left: 120px; top: 15px; width: 40px; height: 20px; display: flex; align-items: center; }
+.row .chain span { padding-left: 2px; font-size: 18px; line-height: 1; white-space: nowrap; }
+.row .emblem { left: 200px; top: 2px; width: 110px; height: 110px; }
+.row .score-v { left: 348px; top: 42px; font-size: 30px; }
+.row .score-l { left: 348px; top: 75px; font-size: 16px; color: {{ gold }}; }
+
+/* 技能格: 原版 120x140 画好后缩到 70x82 */
+.skills { position: absolute; left: 300px; top: 10px; }
+.skill { position: absolute; top: 0; width: 70px; height: 82px; }
+.skill .inner { position: absolute; left: 0; top: 0; width: 120px; height: 140px; transform: scale({{ skill_scale_x }}, {{ skill_scale_y }}); transform-origin: top left; }
+.skill .sbg { left: 0; top: 0; width: 120px; height: 120px; background-image: url('{{ skill_bg_url }}'); }
+.skill .sicon { left: 25px; top: 25px; width: 70px; height: 70px; }
+.skill .slv { left: 62px; top: 120px; font-size: 38px; }
+
+/* 武器块: 原版 600x300 画好后缩到 260x130 */
+.weapon { position: absolute; left: 710px; top: 25px; width: 260px; height: 130px; overflow: hidden; }
+.weapon .inner { position: absolute; left: 0; top: 0; width: 600px; height: 300px; transform: scale({{ weapon_scale }}); transform-origin: top left; }
+.weapon .wbg { left: 45px; top: 0; width: 140px; height: 140px; }
+.weapon .wicon { left: 55px; top: 20px; width: 110px; height: 110px; }
+.weapon .wname { left: 200px; top: 30px; font-size: 40px; color: {{ gold }}; }
+.weapon .wlv { left: 203px; top: 75px; font-size: 30px; }
+.weapon .pip { top: 100px; width: 40px; height: 40px; background-image: url('{{ promote_url }}'); }
+.weapon .reson { position: absolute; left: 103px; top: 96px; width: 58px; height: 30px; border-radius: 8px; }
+.weapon .reson span { position: absolute; left: 29px; top: 15px; transform: translate(-50%, -50%); font-size: 24px; white-space: nowrap; }
+
+.hint { font-size: 24px; color: {{ gold }}; }
+.footer { width: 100%; text-align: center; opacity: .6; }
+.footer img { max-width: 100%; }
+</style>
+<style>
+{% for url in assets %}.a{{ loop.index0 }} { background-image: url('{{ url }}'); }
+{% endfor %}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="bg-layer"><img class="bg-image" src="{{ bg_url }}"></div>
+    <div class="page">
+        <div class="header">
+            <div class="deco">CHARACTER LIST</div>
+            <div class="avatar-box">
+                <div class="ring"></div>
+                <div class="face" style="background-image: url('{{ avatar_url }}')"></div>
+            </div>
+            <div class="user-info">
+                <div class="user-row">
+                    <div class="user-name">{{ user_name }}</div>
+                    <div class="user-uid">特征码 {{ user_id }}</div>
+                </div>
+                <div class="user-stats">
+                    {% if show_stats %}
+                    <div class="stat-item">
+                        <div class="stat-value">Lv.{{ level }}</div>
+                        <div class="stat-label">账号等级</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Lv.{{ world_level }}</div>
+                        <div class="stat-label">世界等级</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+
+        <div class="stat-plate" style="background-image: url('{{ info_bg_url }}')">
+            {% for cell in stat_cells %}
+            <div class="t mm stat-v" style="left:{{ cell.x }}px;top:120px">{{ cell.value }}</div>
+            <div class="t mm stat-l" style="left:{{ cell.x }}px;top:160px">{{ cell.label }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="grid">
+            {% for row in rows %}
+            <div class="row {{ row.bar_class }}" style="left: {{ row.left }}px; top: {{ row.top }}px"{% if row.cmd %} data-ww-cmd="{{ row.cmd }}"{% endif %}>
+                <i class="ic avatar {{ row.avatar_class }}"></i>
+                <i class="ic attr {{ row.attr_class }}"></i>
+                <div class="chain" style="background: {{ row.chain_color }}"><span>{{ row.chain_name }}</span></div>
+                <div class="t mm lv">Lv.{{ row.level }}</div>
+                {% if row.score %}
+                <i class="ic emblem {{ row.score.emblem_class }}"></i>
+                <div class="t mm score-v">{{ row.score.value }}</div>
+                <div class="t mm score-l">声骸分数</div>
+                {% endif %}
+                <div class="skills">
+                    {% for skill in row.skills %}
+                    <div class="skill" style="left: {{ skill.left }}px">
+                        <div class="inner">
+                            <i class="ic sbg"></i>
+                            {% if skill.icon_class %}<i class="ic sicon {{ skill.icon_class }}"></i>{% endif %}
+                            <div class="t mm slv" style="color: {{ skill.color }}">{{ skill.level }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="weapon">
+                    <div class="inner">
+                        <div class="t wname">{{ row.weapon.name }}</div>
+                        <div class="t wlv">Lv.{{ row.weapon.level }}/90</div>
+                        {% for pip in row.weapon.pips %}
+                        <i class="ic pip" style="left: {{ 200 + 40 * loop.index0 }}px"></i>
+                        {% endfor %}
+                        <i class="ic wbg {{ row.weapon.bg_class }}"></i>
+                        <i class="ic wicon {{ row.weapon.icon_class }}"></i>
+                        <div class="reson" style="background: {{ row.weapon.reson_color }}"><span>{{ row.weapon.reson }}阶</span></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if hint %}<div class="hint">{{ hint }}</div>{% endif %}
+        {% if footer_url %}<div class="footer"><img src="{{ footer_url }}"></div>{% endif %}
+    </div>
+</div>
+</body>
+</html>

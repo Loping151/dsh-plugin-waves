@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>{{ header.title_name }}</title>
+<style>
+@import url('{{ font_css_url }}');
+
+* { box-sizing: border-box; }
+body { margin: 0; background: #0f1115; }
+
+.container {
+    position: relative;
+    width: {{ card_w }}px;
+    padding-bottom: 40px;
+    background-image: url('{{ bg }}');
+    background-size: cover;
+    background-position: center;
+    font-family: 'Source Han Sans CN', 'Noto Sans CJK JP', 'Noto Sans CJK KR', sans-serif;
+    font-weight: 700;
+    color: #fff;
+    overflow: hidden;
+}
+
+/* 文本按 PIL 锚点定位: lm 左中 / mm 中中 / rm 右中 */
+.t { position: absolute; white-space: nowrap; line-height: 1; transform: translateY(-50%); }
+.t.mm { transform: translate(-50%, -50%); }
+
+/* ---------------- 头部: 标题底图 + 立绘, 底部渐隐 ---------------- */
+.header { position: relative; width: 100%; height: {{ header_h }}px; }
+.header .art {
+    position: absolute; inset: 0; overflow: hidden;
+    -webkit-mask-image: {{ header.mask }}; mask-image: {{ header.mask }};
+}
+.header .art img { position: absolute; }
+.header .title-bg { left: {{ header.title_dx }}px; top: 0; width: 1050px; height: 500px; }
+.header .logo { left: 50px; top: 65px; width: 200px; height: 80px; }
+.header .time { left: 170px; top: 205px; font-size: 20px; color: {{ grey }}; }
+.header .title { left: 240px; top: 265px; font-size: 30px; color: #000; }
+.header .ver {
+    position: absolute; top: 255px; width: 100px; height: 30px;
+    border-radius: 6px; background: rgba(0, 79, 152, .9);
+    font-size: 24px; line-height: 30px; text-align: center;
+}
+.header .stat-v { top: 335px; font-size: 44px; }
+.header .stat-l { top: 375px; font-size: 20px; color: {{ gold }}; }
+
+/* ---------------- 上榜条件 ---------------- */
+.cond { position: relative; width: 100%; height: {{ cond.height }}px; }
+.cond .panel {
+    position: absolute; left: 20px; top: 20px;
+    width: {{ card_w - 40 }}px; height: {{ cond.height - 35 }}px;
+    border-radius: 8px; background: rgba(36, 36, 41, .9);
+}
+.cond .accent {
+    position: absolute; left: 20px; top: 20px;
+    width: {{ card_w - 40 }}px; height: 7px; background: rgb(203, 161, 95);
+}
+.cond .label { left: 40px; top: 60px; font-size: 24px; color: {{ grey }}; }
+.cond .line { left: 185px; font-size: 20px; color: {{ gold }}; }
+.cond .notes { right: 40px; top: {{ cond.height - 30 }}px; font-size: 16px; color: {{ gold }}; }
+
+/* ---------------- 排行行 ---------------- */
+.row {
+    position: relative; width: {{ card_w }}px; height: {{ geo.item_h }}px;
+    background-image: url('{{ bar }}'); background-size: 100% 100%;
+    overflow: hidden;
+}
+.row .glow { position: absolute; left: {{ geo.user_x - 20 }}px; right: 70px; top: 10px; bottom: 10px; border-radius: 14px; }
+.row.t1 .glow { background: linear-gradient(90deg, rgba(255, 196, 60, .18), rgba(255, 196, 60, 0) 42%); }
+.row.t2 .glow { background: linear-gradient(90deg, rgba(208, 216, 226, .16), rgba(208, 216, 226, 0) 42%); }
+.row.t3 .glow { background: linear-gradient(90deg, rgba(214, 150, 92, .16), rgba(214, 150, 92, 0) 42%); }
+
+.row .medal { position: absolute; left: {{ geo.rank_x }}px; top: {{ geo.medal_y }}px; width: {{ geo.medal_size }}px; height: {{ geo.medal_size }}px; }
+.row .box {
+    position: absolute; top: {{ geo.box_y }}px; height: {{ geo.box_h }}px;
+    border-radius: 8px; background: rgba(54, 54, 54, .9); text-align: center;
+    line-height: {{ geo.box_h }}px;
+}
+.row .avatar { position: absolute; }
+.row .name {
+    left: {{ geo.user_x }}px; top: {{ geo.name_y }}px; font-size: 22px;
+    max-width: {{ geo.name_max }}px; overflow: hidden; text-overflow: ellipsis;
+}
+.row .uid { left: {{ geo.user_x }}px; top: {{ geo.uid_y }}px; font-size: 18px; }
+.row .badge { position: absolute; left: {{ geo.badge_x }}px; top: {{ geo.badge_y }}px; width: 208px; height: 39px; }
+.row .badge .plate { position: absolute; left: 4px; top: 5px; width: 201px; height: 31px; border-radius: 6px; background: rgba(54, 54, 54, .6); }
+.row .badge .bg { position: absolute; left: 104px; top: 19px; transform: translate(-50%, -50%); }
+.row .badge .txt { position: absolute; left: 104px; top: 20px; transform: translate(-50%, -50%); font-size: 18px; white-space: nowrap; }
+
+.row .thumb { position: absolute; left: {{ geo.thumb_x }}px; top: {{ geo.icon_y }}px; width: {{ geo.icon_size }}px; height: {{ geo.icon_size }}px; }
+.row .fetter { position: absolute; left: {{ geo.thumb_x + geo.fetter_dx }}px; top: {{ geo.fetter_y }}px; width: {{ geo.fetter_size }}px; height: {{ geo.fetter_size }}px; }
+.row .pip { position: absolute; top: {{ geo.pip_y }}px; width: {{ geo.pip_size }}px; height: {{ geo.pip_size }}px; }
+
+.row .hl { position: absolute; height: 26px; border-radius: 6px; background: rgba(234, 183, 4, .18); }
+.row .pname { max-width: {{ geo.name_col_max }}px; overflow: hidden; text-overflow: ellipsis; }
+.row .pval, .row .pscore { font-size: 16px; }
+
+.row .emblem { position: absolute; left: {{ geo.emblem_x }}px; top: {{ geo.emblem_y }}px; width: {{ geo.emblem_size }}px; height: {{ geo.emblem_size }}px; }
+.row .score-v { left: {{ geo.score_x }}px; top: {{ geo.score_y }}px; font-size: 40px; }
+.row .score-l { left: {{ geo.score_label_x }}px; top: {{ geo.score_label_y }}px; font-size: 16px; color: {{ gold }}; }
+.hot { position: absolute; border-radius: 10px; }
+
+.icon-img { background-size: 100% 100%; background-repeat: no-repeat; }
+{% for a in assets %}.{{ a.cls }} { background-image: url('{{ a.uri }}'); }
+{% endfor %}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="art">
+            <img class="title-bg" src="{{ header.title_bg }}">
+            <img class="logo" src="{{ header.logo }}">
+            <div class="t time">{{ header.time }}</div>
+            <div class="t title">{{ header.title_name }}</div>
+            <div class="ver" style="left: {{ header.version_x }}px">{{ header.version }}</div>
+            {% for s in header.stats %}
+            <div class="t mm stat-v" style="left: {{ s.x }}px">{{ s.value }}</div>
+            <div class="t mm stat-l" style="left: {{ s.x }}px">{{ s.label }}</div>
+            {% endfor %}
+            {% if header.pile %}
+            <img class="pile" src="{{ header.pile.uri }}"
+                 style="left: {{ header.pile.x }}px; top: {{ header.pile.y }}px; width: {{ header.pile.w }}px; height: {{ header.pile.h }}px">
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="cond">
+        <div class="panel"></div>
+        <div class="accent"></div>
+        <div class="t label">上榜条件</div>
+        <div class="t line" style="top: 50px">{{ cond.line1 }}</div>
+        <div class="t line" style="top: 85px">{{ cond.line2 }}</div>
+        <div class="t notes">{{ cond.notes }}</div>
+    </div>
+
+    {% for row in rows %}
+    <div class="row{% if row.rank <= 3 %} t{{ row.rank }}{% endif %}">
+        <div class="glow"></div>
+        {% if row.medal %}
+        <div class="medal icon-img {{ row.medal }}"></div>
+        {% else %}
+        <div class="box" style="left: {{ geo.box_cx - row.box.w // 2 }}px; width: {{ row.box.w }}px; font-size: {{ row.box.size }}px">{{ row.box.text }}</div>
+        {% endif %}
+        {% if row.avatar %}
+        <img class="avatar" src="{{ row.avatar.uri }}"
+             style="left: {{ row.avatar.x }}px; top: {{ row.avatar.y }}px; width: {{ row.avatar.w }}px; height: {{ row.avatar.h }}px">
+        {% endif %}
+        <div class="t name">{{ row.name }}</div>
+        <div class="t uid" style="color: {{ row.uid_color }}">{{ row.uid }}</div>
+        {% if row.badge %}
+        <div class="badge">
+            {% if row.badge.cls %}
+            <div class="bg icon-img {{ row.badge.cls }}" style="width: {{ row.badge.w }}px; height: {{ row.badge.h }}px"></div>
+            {% else %}<div class="plate"></div>{% endif %}
+            <div class="txt">{{ row.badge.name }}</div>
+        </div>
+        {% endif %}
+        {% if row.icon %}<div class="thumb icon-img {{ row.icon }}"></div>{% endif %}
+        {% if row.fetter %}<div class="fetter icon-img {{ row.fetter }}"></div>{% endif %}
+        {% for x in row.pips %}<img class="pip" src="{{ pip }}" style="left: {{ x }}px">{% endfor %}
+
+        {% for p in row.props %}
+        {% if p.highlight %}<div class="hl" style="left: {{ p.highlight.left }}px; top: {{ p.y - 13 }}px; width: {{ p.highlight.w }}px"></div>{% endif %}
+        <div class="t pname" style="left: {{ p.name_x }}px; top: {{ p.y }}px; font-size: {{ p.name_size }}px; color: {{ p.name_color }}">{{ p.name }}</div>
+        <div class="t pval" style="right: {{ p.value_right }}px; top: {{ p.y }}px; color: {{ p.value_color }}">{{ p.value }}</div>
+        <div class="t pscore" style="right: {{ p.score_right }}px; top: {{ p.y }}px; color: {{ p.score_color }}">{{ p.score }}</div>
+        {% endfor %}
+
+        {% if row.emblem %}<div class="emblem icon-img {{ row.emblem }}"></div>{% endif %}
+        <div class="t mm score-v">{{ row.score }}</div>
+        <div class="t mm score-l">单声骸分数</div>
+        <div class="hot" style="left: {{ geo.emblem_x }}px; top: {{ geo.emblem_y }}px; width: {{ geo.width - geo.emblem_x - 30 }}px; height: {{ geo.emblem_size }}px" data-ww-cmd="{{ cmd_damage }}"></div>
+        <div class="hot" style="left: {{ geo.thumb_x }}px; top: {{ geo.icon_y }}px; width: {{ geo.icon_size }}px; height: {{ geo.icon_size }}px" data-ww-cmd="{{ cmd_score }}"></div>
+    </div>
+    {% endfor %}
+</div>
+</body>
+</html>
