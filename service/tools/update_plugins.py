@@ -110,21 +110,33 @@ def clone_with_fallback(name: str, dest: Path, github: str, cnb: str) -> str:
     return f"{name}: 已克隆 ({source}) {head}"
 
 
-def pull_with_fallback(name: str, dest: Path, cnb: str) -> Optional[str]:
-    """origin 是 GitHub 且不可达时, 把 origin 改成 cnb 再拉一次。失败返回错误文案。"""
+def _other_remote(origin: str, github: str, cnb: str):
+    """当前 origin 不可达时该换去哪一边; 第三方 origin 不擅自改。"""
+    if "github.com" in origin:
+        return cnb, "cnb"
+    if "cnb.cool" in origin:
+        return github, "GitHub"
+    return None, ""
+
+
+def pull_with_fallback(name: str, dest: Path, github: str, cnb: str) -> Optional[str]:
+    """origin 不可达时切到另一个源再拉一次(两边互为备份)。失败返回错误文案。"""
     result = run(["git", "pull", "--ff-only"], cwd=dest, timeout=PULL_TIMEOUT)
     if result.returncode == 0:
         return None
-    origin = run(["git", "remote", "get-url", "origin"], cwd=dest).stdout.strip()
-    if not is_unreachable(result) or "github.com" not in origin:
+    if not is_unreachable(result):
         return f"{name}: 拉取失败 {result.stderr.strip()[:160]}"
-    print(f"{name}: GitHub 不可达, origin 改为 cnb")
-    setu = run(["git", "remote", "set-url", "origin", cnb], cwd=dest)
+    origin = run(["git", "remote", "get-url", "origin"], cwd=dest).stdout.strip()
+    other, label = _other_remote(origin, github, cnb)
+    if not other:
+        return f"{name}: 拉取失败 {result.stderr.strip()[:160]}"
+    print(f"{name}: 当前源不可达, origin 改为 {label}")
+    setu = run(["git", "remote", "set-url", "origin", other], cwd=dest)
     if setu.returncode:
         return f"{name}: 无法改 origin {setu.stderr.strip()[:120]}"
     result = run(["git", "pull", "--ff-only"], cwd=dest, timeout=PULL_TIMEOUT)
     if result.returncode:
-        return f"{name}: cnb 拉取也失败 {result.stderr.strip()[:160]}"
+        return f"{name}: {label} 拉取也失败 {result.stderr.strip()[:160]}"
     return None
 
 
@@ -144,7 +156,7 @@ def sync_one(name: str, urls: dict) -> str:
         )
 
     before = run(["git", "rev-parse", "--short", "HEAD"], cwd=dest).stdout.strip()
-    err = pull_with_fallback(name, dest, cnb)
+    err = pull_with_fallback(name, dest, github, cnb)
     if err:
         return err
     after = run(["git", "rev-parse", "--short", "HEAD"], cwd=dest).stdout.strip()

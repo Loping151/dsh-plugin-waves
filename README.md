@@ -135,7 +135,8 @@ token 的申请方式与使用条件与本体一致，请阅读：
 cd service && .venv/bin/python tools/update_plugins.py
 ```
 
-默认从 GitHub 拉；连不上时自动改用 `cnb.cool/gscore-mirror`（已有仓库会把 origin 切过去）。
+默认从 GitHub 拉；连不上时自动改用 `cnb.cool/gscore-mirror`，反过来镜像不通也会切回 GitHub（已有仓库会把 origin 一并改掉）。
+只有网络类错误才切源，仓库不存在、认证失败、无法快进这些会照原样报出来。
 
 上游若用到了本运行时还没提供的接口，不会静默失败：更新命令会把缺失的模块和适配步骤
 直接交给 dsh 里的模型，让它改好运行时再让你重启。
