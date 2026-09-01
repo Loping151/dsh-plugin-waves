@@ -301,11 +301,29 @@ def _patch_score_token(module) -> None:
     config.get_config = get_config
 
 
+def _patch_help_period(module) -> None:
+    """帮助的深塔查询分组补一条挑战周期说明。"""
+    group = module.plugin_help.get("深塔查询")
+    data = group.get("data") if isinstance(group, dict) else None
+    if not isinstance(data, list) or any(i.get("name") == "挑战周期" for i in data):
+        return
+    data.append({
+        "name": "挑战周期",
+        "desc": "深塔/冥海每 28 天一期、矩阵约 42 天一期(实际以游戏内为准)，当天 04:00 换期。"
+                "换期后接口只保留新一期数据：查询时挑战记录缺失或变空说明挑战已更新，打完新一期再查。",
+        "eg": "深塔",
+        "need_ck": False,
+        "need_sk": False,
+        "need_admin": False,
+    })
+
+
 _PATCHES = {
     "XutheringWavesUID": {
         "utils.render_utils": _patch_render,
         "utils.resource.download_all_resource": _patch_skip_ai,
         "wutheringwaves_stamina.draw_waves_stamina": _patch_stamina,
+        "wutheringwaves_help.get_help": _patch_help_period,
     },
     "RoverSign": {
         "roversign_config.roversign_config": _patch_rs_shared,

@@ -108,6 +108,40 @@ async def chat(req: ChatRequest) -> Dict[str, Any]:
     }
 
 
+class PanelRenderRequest(BaseModel):
+    char: str
+    uid: Optional[str] = None
+    echoes: Optional[List[Dict[str, Any]]] = None
+    change: Optional[str] = None
+
+
+@app.post("/api/render/panel")
+async def render_panel(req: PanelRenderRequest) -> Dict[str, Any]:
+    """自定义 ctx 重组面板。只渲染, 不落盘、不进总排行上传队列。"""
+    import time
+
+    from rover.custom_panel import render_custom_panel
+
+    started = time.perf_counter()
+    err, sink = await render_custom_panel(req.model_dump())
+    if err:
+        return {
+            "ok": False,
+            "summary": err,
+            "matched": [],
+            "segments": [],
+            "elapsed": round(time.perf_counter() - started, 3),
+        }
+    rendered = await render_segments(sink)
+    return {
+        "ok": True,
+        "summary": summarize(rendered) or "已渲染",
+        "matched": ["自定义面板"],
+        "segments": rendered,
+        "elapsed": round(time.perf_counter() - started, 3),
+    }
+
+
 @app.get("/api/config/media")
 async def media_config() -> Dict[str, Any]:
     """前端渲染要用的少量取值, 单独给一个轻接口。"""
@@ -191,6 +225,67 @@ async def alias_lookup(text: str = "") -> Dict[str, Any]:
     return {"hits": hits}
 
 
+_ATT_HEX = re.compile(r"^[0-9a-f]{64}$")
+_ATT_MAGIC = {b"\x89PNG": "image/png", b"\xff\xd8\xff": "image/jpeg",
+              b"RIFF": "image/webp", b"GIF8": "image/gif"}
+
+
+@app.get("/api/attachment/{sha}")
+async def attachment_file(sha: str):
+    """按内容哈希回吐 dsh 附件库里的图片, 给前端把剥图提示渲染回图用。"""
+    import os
+
+    if not _ATT_HEX.match(sha):
+        raise HTTPException(status_code=400, detail="不是合法的附件哈希")
+    home = Path(os.environ.get("DSH_HOME") or Path.home() / ".dsh")
+    path = home / "attachments" / "v1" / "objects" / sha[:2] / sha
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="附件不存在")
+    head = path.open("rb").read(4)
+    media_type = next((t for m, t in _ATT_MAGIC.items() if head.startswith(m)), "application/octet-stream")
+    return FileResponse(path, media_type=media_type, headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/api/knowledge/search")
+async def knowledge_search(
+    q: str = "", source: str = "", tags: str = "", limit: int = 5, full: int = 0
+) -> Dict[str, Any]:
+    from rover import knowledge
+
+    items = knowledge.search(
+        q,
+        source=source or None,
+        tags=[t for t in tags.split(",") if t.strip()] or None,
+        limit=max(1, min(limit, 20)),
+        full=bool(full),
+    )
+    return {"total": len(items), "items": items}
+
+
+@app.get("/api/knowledge/entry/{kid}")
+async def knowledge_entry(kid: str) -> Dict[str, Any]:
+    from rover import knowledge
+
+    rec = knowledge.get(kid)
+    if rec is None:
+        raise HTTPException(status_code=404, detail=f"条目不存在: {kid}")
+    return {k: v for k, v in rec.items() if not k.startswith("_")}
+
+
+@app.get("/api/knowledge/lookup")
+async def knowledge_lookup(text: str = "", exclude: str = "", limit: int = 2) -> Dict[str, Any]:
+    from rover import knowledge
+
+    if core_config.get_config("knowledge_enhance") is False:
+        return {"hits": []}
+    hits = knowledge.lookup(
+        text,
+        exclude={e for e in exclude.split(",") if e.strip()},
+        limit=max(1, min(limit, 4)),
+    )
+    return {"hits": hits}
+
+
 @app.get("/api/media/{name}/png")
 async def media_png(name: str):
     """HTML 卡片的截图版, 按原始设计宽度渲染, 供前端"保存"按钮下载。"""
@@ -260,6 +355,8 @@ CORE_GROUP = "服务配置"
 # 服务自身配置没有 UI 元数据, 这里补类型与文案
 CORE_META: Dict[str, tuple] = {
     "expose_to_model": ("BoolConfig", "AI 可使用鸣潮插件", "作为工具暴露给模型, 占少量额外上下文; 只用 /ww 命令时可关闭省上下文"),
+    "knowledge_enhance": ("BoolConfig", "内置知识增强（测试）", "用户消息命中游戏常识关键词时自动附带内置知识条目; 关闭只停自动注入, AI 主动检索(kb)不受影响, 即时生效"),
+    "image_ocr": ("BoolConfig", "图片文字摘要（OCR）", "评分/面板等图片卡用本地轻量 OCR 抽出文字随摘要给模型, 纯文本模型也能读到卡上数值; 即时生效"),
     "avatar": ("StrConfig", "头像", "卡片头部的头像: 直接上传图片, 或填 http(s) 链接 / QQ 号 / 本地路径; 置空用插件自带的"),
     "HOST": ("StrConfig", "监听地址", "服务绑定的地址"),
     "PORT": ("StrConfig", "监听端口", "服务监听的端口"),

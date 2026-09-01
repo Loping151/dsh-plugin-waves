@@ -2,7 +2,7 @@
   <a href="https://github.com/Loping151/XutheringWavesUID"><img src="./ICON.png" width="200" height="200" alt="dsh-plugin-waves"></a>
 </p>
 <h1 align="center">dsh-plugin-waves</h1>
-<p align="center">XutheringWavesUID 的 DeepSeek Harness 版本 · v0.0.1</p>
+<p align="center">XutheringWavesUID 的 DeepSeek Harness 版本 · v0.0.2</p>
 
 这是 [XutheringWavesUID](https://github.com/Loping151/XutheringWavesUID) 的 dsh 版：同一套鸣潮查询、
 面板、伤害计算与评分、排行，由 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
@@ -114,6 +114,19 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -Src C:\gsuid_core\data
 群成员管理、群排行、公告订阅、订阅签到结果、联系主人这类只在群聊里成立的命令不注册。
 内置 HTTP 接口见 [docs/api.md](./docs/api.md)。
 
+带截图的命令（`ww评分`、`ww分析`）走模型时直接把图和话一起发即可：图片不会进模型
+（DeepSeek 文本路由不吃图），host 会暂存并在模型调用工具时随命令转交服务。
+模型还可以用 `waves_panel` 工具按自定义数据（跨角色借声骸、手填词条）渲一张假设面板——
+只在本地渲染，不写用户数据、不上传总排行。
+
+图片卡（评分/面板等）会经本地轻量 OCR（RapidOCR）把文字抽进给模型的摘要，
+纯文本模型也能读到卡上数值；设置里"图片文字摘要（OCR）"可关。
+
+内置游戏知识库（`service/knowledge/`）：库洛 wiki 全站文本按小节整理（图鉴/攻略/百科等
+5000+ 节，图片以原 URL 内嵌）+ 人工补充的机制常识（挑战周期、换期语义、配队细则）。
+用户话里首次提到角色名/机制词时自动附带对应条目（每会话每条只注入一次），模型也可主动检索。
+设置里"内置知识增强（测试）"可关掉自动注入，主动检索不受影响。
+
 ## Token
 
 伤害计算、评分与排行都要 `WavesToken`，**评分与排行是同一个 token，只填一处**：
@@ -150,7 +163,7 @@ cd service && .venv/bin/python tools/update_plugins.py
 | `service/data/RoverSign/config.json` | 签到 |
 | `service/data/ScoreEcho/config.json` | 识图评分 |
 
-这些也可以在 dsh 的**设置 → 鸣潮**里直接改，共 61 项（只留下本地场景用得上的），敏感项显示为掩码。
+这些也可以在 dsh 的**设置 → 鸣潮**里直接改，共 60 余项（只留下本地场景用得上的），敏感项显示为掩码。
 数据目录首次运行自动生成，不需要预先准备。
 
 ## 结构
@@ -160,6 +173,7 @@ assets/          README 用例图
 docs/            人读文档（内置 HTTP 接口）
 lib/             dsh 侧：斜杠命令、模型工具、反代 /waves-api、托管服务、浏览器卡片
 service/ai/      给模型读的数据/脚本指南
+service/knowledge/ 内置游戏知识库（wiki 文本 + 人工补充，AI 检索与自动注入）
 service/rover/   运行时：命令分发、数据库、配置、调度、渲染、接口
 service/plugins/ 上游插件原样克隆（勿手改，改动请写进 hooks）
 service/tools/   安装、迁移、更新与自检脚本

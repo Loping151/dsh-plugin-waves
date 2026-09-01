@@ -56,6 +56,33 @@ curl -s http://127.0.0.1:3080/waves-api/api/health
 
 `segments[].type`：`text` / `image` / `html` / `file` / `buttons` / `node`。`url` 以 `/api/` 开头的要按上面的反代规则补前缀。
 
+### `POST /api/render/panel`
+
+自定义 ctx 重组角色声骸后渲完整面板。只渲染：不写 `players/`、不进总排行上传队列。
+
+```json
+{
+  "char": "椿",
+  "uid": "100000001",
+  "echoes": [
+    { "slot": 1, "from": { "char": "洛可可", "slot": 2 } },
+    { "slot": 2, "name": "无冠者", "cost": 4, "sonata": "沉日劫明",
+      "main": [["暴击", "22.0%"], ["攻击", "150"]],
+      "subs": [["暴击伤害", "21.0%"], ["攻击", "11.6%"]] }
+  ],
+  "change": "换6链"
+}
+```
+
+| 字段 | 说明 |
+|---|---|
+| `char` | 必填。角色名/别名 |
+| `uid` | 可选。默认当前绑定 |
+| `echoes` | 可选。每项按 `slot`(1-5, 缺省按下标) 替换：`from` 引用某角色某槽位的现有声骸，或给全量自定义（`name`/`cost`/`sonata`/`main`/`subs`，可选 `level`/`quality`/`num`）。总 cost ≤12 |
+| `change` | 可选。走既有换装文本管线（换链/武器/等级/技能/主词条等） |
+
+返回结构同 `/api/chat`。
+
 ### `GET /api/commands`
 
 当前已注册触发器列表，以及标了给模型用的命令说明（`ai`）。

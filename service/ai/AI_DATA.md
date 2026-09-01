@@ -43,6 +43,10 @@ w.base_info(uid)               # 名字/等级/世界等级/激活天数
 
 `wwdata` 只读，且已经把 gzip、别名、评分模板这些琐事包好了。直接读 json 也行，但别绕过只读约束。
 
+跑脚本不需要沙箱升级：读 data、写 scratch 都在默认权限内，shell 工具别带
+`sandbox_permissions`/`justification` 参数（同级升级会被拒，空 justification 会报错）。
+Windows 下控制台输出中文会乱码：结果写成 UTF-8 文件到 `wwdata.scratch()` 再读回来，别依赖 stdout。
+
 ## 角色与练度
 
 ```python
@@ -50,7 +54,7 @@ w.roster(uid)     # 紧凑一行式: "卡提希娅 Lv90 6链 不屈命定之冠5
 w.roster(uid, 10) # 只要练度最高的 10 个
 
 w.roles(uid)      # 完整结构, 需要逐项判断时才用
-# {'id','name','level','attribute','chain'(命座数),'weapon':{'name','level','reson'},
+# {'id','name','level','attribute','chain'(链数),'weapon':{'name','level','reson'},
 #  'skills':{'常态攻击':10,...},'echo_score','sonatas':{'沉日劫明':5}}
 ```
 
@@ -71,6 +75,17 @@ w.id2name()              # 全表，够用就别再去读 alias 文件
 
 别名原始表在 `data/XutheringWavesUID/alias/`（`char_alias.json`、`sonata_alias.json`、`echo_alias.json`、
 `weapon_alias.json`），只有 `w.resolve` 认不出来时才需要翻。
+
+角色图鉴（detail_json 的精简视图，富文本标记已剥掉，只传有效信息）：
+
+```python
+w.char_info("菲比")                  # 属性/武器型/星级/技能/共鸣链, 纯文本
+w.char_info("菲比", parts=["stats"]) # 附成长数值(还可加 "ascensions")
+w.detail_file("weapon", "苍鳞千嶂")   # char/weapon/echo/sonata 源文件路径
+w.clean_text(s)                      # 自己读源文件时剥 <span style=...> 等标记
+```
+
+要抠 `char_info` 没带出来的原始字段（成长曲线细节、技能树 param 等）才去读 `detail_file` 指向的源文件。
 
 用户话里出现别名时，插件会在上下文尾部补一条对照（"暗套→沉日劫明"这种）。那是按子串匹配来的，
 可能误命中，别当成用户已经确认的指代；拿不准就按用户原话问一句。
@@ -104,6 +119,11 @@ ms = w.matrix_summary(uid)
 
 做法：
 
+0. **先核对周期**：`w.challenge_periods()` 拿当期开始时间，与 `matrix_summary` 的 `record_time`
+   比对。record_time 早于当期 start = 上一期数据，只能当历史参考；`ww矩阵` 提示"暂无数据" =
+   已换期且新一期没打（不是 bug，见 kb"挑战周期"）。当期 boss/可多次上场角色**没有接口可查**
+   （矩阵接口只回个人战绩，wiki 活动说明只有时间条件）：用户没打新一期就把所缺信息一次列全
+   请用户从游戏里带出来，别拆成多轮。目标不用问，默认冲总分最高。配队硬约束见 kb"矩阵配队规则"。
 1. `matrix_summary` 看哪层卡住（`pass_boss < boss_count`）、当前用了谁、这层的 buff 是什么。
 2. `roles(uid)` 拿全部持有角色和练度，注意别推荐没有的角色，也别把低练度角色当核心。
 3. buff 描述里往往点名了机制（异常效应、虚湮、共鸣解放等），据此决定配队方向。
@@ -131,8 +151,11 @@ w.swap_gains(uid, "沉日劫明")      # 直接给出总分净增益为正的两
 
 ### 把截图里的声骸也放进池子
 
-`ww评分 <角色><cost>c(主词条)` 带图会走远端识图评分，回的是一张卡片。
-要让新声骸参与本地推演，把截图上的词条转录出来自己造一件：
+`ww评分 <角色><cost>c(主词条)` 带图（调 waves 工具时设 with_image=true）走远端识图评分，回的是一张卡片；
+卡片会被本地 OCR，词条名与数值就在返回的 summary"图片文字(OCR)"里。
+要让新声骸参与本地推演，把词条转录出来自己造一件——优先从评分卡的 OCR 文字里抄；
+OCR 缺漏或没走评分时，能读图的路由用读图工具读上下文提示给的暂存路径，都不行就让用户打字发来，
+别凭空编数值：
 
 ```python
 new = w.make_echo(
@@ -146,6 +169,41 @@ for c in ["椿", "洛可可", "弗洛洛"]:
 ```
 
 词条名和值照抄面板原文（带 `%` 就带上）。
+
+### 重组出一张完整面板卡
+
+打分归打分，想让用户直观看到"换完之后面板长什么样"，用 `waves_panel` 工具（不是命令）：
+
+```json
+{ "char": "椿",
+  "echoes": [
+    { "slot": 1, "from": { "char": "洛可可", "slot": 2 } },
+    { "slot": 2, "name": "无冠者", "cost": 4, "sonata": "沉日劫明",
+      "main": [["暴击", "22.0%"], ["攻击", "150"]],
+      "subs": [["暴击伤害", "21.0%"], ["攻击", "11.6%"]] }
+  ],
+  "change": "换6链" }
+```
+
+- 没列到的槽位保持该角色当前装备；`from` 引用别人正在装备的那件，自定义件词条照抄原文。
+- cost 只能 1/3/4，总和 ≤12；`change` 走换装文本管线（换链/武器/等级/技能/主词条）。
+- 只在本地渲染出卡：不写 `players/`、不进总排行上传队列。别把假设数据说成用户真实面板。
+
+## 游戏常识知识库
+
+库洛 wiki 文本（图鉴/攻略/百科/活动/任务/剧情）已在本地，按"条目/小节"粒度存放，
+纯文本、图片以 `![名](url)` 内嵌——要展示图片直接把 url 给用户。
+
+```python
+w.kb("虚湮效应")                 # 词法检索小节 → [{id,entry,title,tags,score,snippet}]
+w.kb("配队", tags=["玩法攻略"])   # 按 tags/source 收窄
+w.kb_get("wiki-xxx#2")           # 小节 id → 该小节
+w.kb_get("wiki-xxx")             # entry id → 整条(全部小节)
+```
+
+先 `kb` 看 snippet 定位到小节，通常小节就够了；要上下文再用 entry id 取整条，别整库摊开。
+用户话里首次提到角色名/机制词时，插件会自动附带该条目的首个小节（每会话每条只附一次，
+标注"仅供参考"）；那只是字面命中，后续要引用细节自己再 `kb`/`kb_get`。
 
 ## 直接读文件
 

@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-waves",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "GPL-3.0",
   "private": true,
   "type": "module",
@@ -15,6 +15,7 @@
     "service/rover",
     "service/tools",
     "service/ai",
+    "service/knowledge",
     "service/pyproject.toml",
     "service/ICON.png",
     "service/plugins/__init__.py"

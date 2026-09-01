@@ -5,7 +5,7 @@
     import sys; sys.path.insert(0, "<service>/tools")
     import wwdata as w
     w.uids()                     # 有数据的特征码
-    w.roles(uid)                 # 角色一览(等级/命座/武器/声骸分)
+    w.roles(uid)                 # 角色一览(等级/链/武器/声骸分)
     w.echoes(uid, sonata="沉日劫明")   # 按套装筛已装备声骸
     w.score(uid, "洛可可", echo)  # 把某个声骸放到某角色的评分模板下打分
 
@@ -511,6 +511,118 @@ def total_score(uid: str, char: str, echo_list: List[Any]) -> float:
     return round(sum(score(uid, char, e)["score"] for e in echo_list), 2)
 
 
+def challenge_periods() -> dict:
+    """深塔/冥海/矩阵当前期号与起止时间(与插件同源的周期规则, 矩阵以游戏内为准)。"""
+    from datetime import timedelta
+
+    period = _mod("wutheringwaves_abyss.period")
+    out = {}
+    for key, cyc in (("tower", period.TOWER_CYCLE), ("slash", period.SLASH_CYCLE),
+                     ("matrix", period.MATRIX_CYCLE)):
+        start = cyc.cycle_start()
+        out[key] = {
+            "period": cyc.period_number(),
+            "start": start.strftime("%Y-%m-%d %H:%M"),
+            "next": (start + timedelta(seconds=cyc.refresh_seconds)).strftime("%Y-%m-%d %H:%M"),
+            "days": cyc.refresh_seconds // 86400,
+        }
+    return out
+
+
+def _kb():
+    if str(SERVICE) not in sys.path:
+        sys.path.insert(0, str(SERVICE))
+    from rover import knowledge
+    return knowledge
+
+
+def kb(q: str, source: Optional[str] = None, tags: Optional[List[str]] = None,
+       limit: int = 5, full: bool = False) -> List[dict]:
+    """游戏常识知识库检索(wiki 全站文本等), 按小节返回。先看 snippet 再 kb_get。
+
+    source 可选 "wiki"; tags 如 ["共鸣者"]。返回 [{id,entry,title,tags,score,snippet|content}]
+    """
+    return _kb().search(q, source=source, tags=tags, limit=limit, full=full)
+
+
+def kb_get(kid: str) -> Optional[dict]:
+    """传小节 id 取该小节, 传 entry id 取整条(全部小节拼装)。
+
+    图片是 ![名](url), 要展示直接把 url 给用户。
+    """
+    return _kb().get(kid)
+
+
+_TAG_RE = None
+
+
+def clean_text(text: Any) -> str:
+    """剥掉图鉴文本里的富文本标记(<span style=...>/<color=...>等), 只留正文。"""
+    global _TAG_RE
+    import html as _html
+    import re as _re
+
+    if _TAG_RE is None:
+        _TAG_RE = _re.compile(r"<[^<>]{1,120}>")
+    s = _TAG_RE.sub("", str(text or ""))
+    s = _html.unescape(s)
+    return _re.sub(r"\n{3,}", "\n\n", s).strip()
+
+
+def detail_file(kind: str, name_or_id: Any) -> Optional[Path]:
+    """detail_json 源文件路径(char/weapon/echo/sonata...), 要抠原始字段时再去读它。"""
+    kind_dir = MAP / "detail_json" / kind
+    key = str(name_or_id)
+    if not key.isdigit():
+        def _weapon_id(n):
+            convert = _mod("utils.name_convert")
+            return convert.weapon_name_to_weapon_id(convert.alias_to_weapon_name(n))
+
+        def _echo_id(n):
+            convert = _mod("utils.name_convert")
+            return convert.echo_name_to_echo_id(convert.alias_to_echo_name(n))
+
+        key = {"char": char_id, "weapon": _weapon_id, "echo": _echo_id}.get(
+            kind, lambda n: None
+        )(key) or key
+    p = kind_dir / f"{key}.json"
+    return p if p.is_file() else None
+
+
+def char_info(char: str, parts: Optional[List[str]] = None) -> dict:
+    """角色图鉴精简版: 技能/共鸣链等文本已净化, 只传有效信息。
+
+    parts 可加 "stats"/"ascensions" 取成长数值; 更细的原始字段读返回值里 file 指向的源文件。
+    """
+    cid = char_id(char)
+    if not cid:
+        raise LookupError(f"不认识的角色: {char}")
+    path = MAP / "detail_json" / "char" / f"{cid}.json"
+    d = _json(path)
+    const = _mod("utils.resource.constant")
+    out: Dict[str, Any] = {
+        "id": int(cid),
+        "name": d.get("name"),
+        "star": d.get("starLevel"),
+        "attribute": const.ATTRIBUTE_ID_MAP.get(d.get("attributeId")),
+        "weapon_type": const.WEAPON_TYPE_ID_MAP.get(d.get("weaponTypeId")),
+        "skills": [
+            {"type": s.get("type"), "name": s.get("name"), "desc": clean_text(s.get("desc"))}
+            for node in (d.get("skillTree") or {}).values()
+            for s in [node.get("skill") or {}] if s
+        ],
+        "chains": {
+            k: {"name": v.get("name"), "desc": clean_text(v.get("desc"))}
+            for k, v in (d.get("chains") or {}).items()
+        },
+        "file": str(path),
+    }
+    for extra in parts or []:
+        if extra in d:
+            out[extra] = d[extra]
+    return out
+
+
 def make_echo(cost: int, sonata: str, echo_name: str, main: list, subs: list, level: int = 25) -> dict:
     """按截图/文本转录出来的声骸, 造成可以打分的形状。
 
@@ -520,7 +632,8 @@ def make_echo(cost: int, sonata: str, echo_name: str, main: list, subs: list, le
         return [{"attributeName": str(n), "attributeValue": str(v)} for n, v in pairs]
 
     return {
-        "phantomProp": {"phantomId": 0, "name": echo_name, "quality": 5, "cost": cost, "iconUrl": ""},
+        "phantomProp": {"phantomPropId": 0, "phantomId": 0, "name": echo_name, "quality": 5,
+                        "cost": cost, "iconUrl": "", "skillDescription": ""},
         "cost": int(cost),
         "quality": 5,
         "level": int(level),

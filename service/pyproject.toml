@@ -26,6 +26,7 @@ dependencies = [
     "pillow>=10.2.0",
     "pydantic>=2.6.0",
     "python-multipart>=0.0.9",
+    "rapidocr-onnxruntime>=1.4.0",
     "pytz>=2024.1",
     "qrcode[pil]>=7.3.1,<8.0.0",
     "sqlalchemy>=2.0.0,<2.1.0",

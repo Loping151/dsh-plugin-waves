@@ -13,6 +13,10 @@ CONFIG_PATH = get_res_path() / "config.json"
 CONFIG_DEFAULT: Dict[str, Any] = {
     # 把插件作为工具暴露给模型(占少量上下文); 关闭后只能用 /ww 命令
     "expose_to_model": True,
+    # 用户消息命中游戏常识关键词时自动附带知识条目; 关闭只停自动注入, 主动检索不受影响
+    "knowledge_enhance": True,
+    # 图片卡片(评分/面板等)本地 OCR 抽文字进 summary, 纯文本模型才看得到卡上数值
+    "image_ocr": True,
     # 卡片头部头像: 本地图片路径 / http(s) 链接 / QQ 号; 置空用插件自带的
     "avatar": "",
     # 服务监听地址; 登录页与字体链接也按它拼

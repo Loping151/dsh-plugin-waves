@@ -9,6 +9,10 @@ from rover.logger import logger
 
 # 角色格子的开标签, 与各模板中的写法一致
 _ROLE_TAG = re.compile(r'<div class="role-mini(?![-\w])(?P<rest>[^>]*)>')
+# 模板用别的格子类名时在这里挂对应模式
+_ROLE_TAGS: dict = {
+    "roleinfo/role_card.html": re.compile(r'<div class="role-card(?![-\w])(?P<rest>[^>]*)>'),
+}
 _BODY_END = re.compile(r"</body\s*>", re.I)
 
 _BRIDGE = """
@@ -125,6 +129,7 @@ _EXTRACTORS: Dict[str, Callable[[dict], List[dict]]] = {
     "abyss/slash_card.html": lambda c: _roles_from(c, ("challenges", "half_list", "roles")),
     "abyss/challenge_card.html": lambda c: _roles_from(c, ("challenges", "roles")),
     "abyss/matrix_detail_card.html": _matrix_roles,
+    "roleinfo/role_card.html": lambda c: [r for r in c.get("role_list") or [] if isinstance(r, dict)],
 }
 
 
@@ -218,7 +223,7 @@ def annotate_html(html: str, template_name: str, context: dict) -> str:
                     extra = f' data-ww-name="{name}"' if name else ""
                     return f'{tag[:-1]} data-ww-cmd="{command}"{extra}>'
 
-                html = _ROLE_TAG.sub(repl, html)
+                html = _ROLE_TAGS.get(template_name, _ROLE_TAG).sub(repl, html)
                 if counter["i"] != len(commands):
                     logger.debug(
                         f"[鸣潮·交互] {template_name} 角色格 {counter['i']} 个, 上下文 {len(commands)} 个"

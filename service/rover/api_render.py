@@ -50,7 +50,7 @@ def html_digest(html: str) -> str:
     return joined[:DIGEST_LIMIT] + " …" if len(joined) > DIGEST_LIMIT else joined
 
 
-def _image_segment(data: Any) -> Dict[str, Any]:
+async def _image_segment(data: Any) -> Dict[str, Any]:
     if isinstance(data, str):
         if data.startswith("link://"):
             return {"type": "image", "url": data[len("link://") :]}
@@ -63,7 +63,16 @@ def _image_segment(data: Any) -> Dict[str, Any]:
     else:
         return {"type": "text", "text": str(data)}
     name = save_media(raw, _guess_ext(raw))
-    return {"type": "image", "url": media_url(name), "bytes": len(raw)}
+    seg: Dict[str, Any] = {"type": "image", "url": media_url(name), "bytes": len(raw)}
+    from rover.config import core_config
+
+    if core_config.get_config("image_ocr") is not False:
+        from rover.ocr import image_digest
+
+        digest = await image_digest(raw)
+        if digest:
+            seg["digest"] = digest
+    return seg
 
 
 async def render_segments(segments: List[Message]) -> List[Dict[str, Any]]:
@@ -77,7 +86,7 @@ async def render_segments(segments: List[Message]) -> List[Dict[str, Any]]:
                 if text.strip():
                     out.append({"type": "text", "text": text})
             elif stype == "image":
-                out.append(_image_segment(data))
+                out.append(await _image_segment(data))
             elif stype == "html":
                 html = data if isinstance(data, str) else str(data)
                 name = save_media(html.encode("utf-8"), "html")
@@ -126,7 +135,11 @@ def summarize(rendered: List[Dict[str, Any]]) -> str:
         if stype == "text":
             parts.append(seg.get("text", ""))
         elif stype == "image":
-            parts.append("[图片已在卡片中展示]")
+            digest = seg.get("digest") or ""
+            parts.append(
+                f"[图片已在卡片中展示]\n图片文字(OCR): {digest}" if digest
+                else "[图片已在卡片中展示]"
+            )
         elif stype == "html":
             digest = seg.get("digest") or ""
             parts.append(
