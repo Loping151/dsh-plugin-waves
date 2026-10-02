@@ -2,7 +2,7 @@
   <a href="https://github.com/Loping151/XutheringWavesUID"><img src="./ICON.png" width="200" height="200" alt="dsh-plugin-waves"></a>
 </p>
 <h1 align="center">dsh-plugin-waves</h1>
-<p align="center">XutheringWavesUID 的 DeepSeek Harness 版本 · v0.0.2</p>
+<p align="center">XutheringWavesUID 的 DeepSeek Harness 版本 · v0.0.3</p>
 
 这是 [XutheringWavesUID](https://github.com/Loping151/XutheringWavesUID) 的 dsh 版：同一套鸣潮查询、
 面板、伤害计算与评分、排行，由 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
@@ -40,6 +40,8 @@
 本仓库仅迁移 XutheringWavesUID 内置方法和接口，以及处理通用知识，使用本插件数据接口继续开发应新建插件以实现功能解耦。
 
 ## 安装
+
+已验证 DSH `0.1.0-rc.7` 与 `0.2.0-rc.2`，需要 Node.js 22.19+ 或 24+。DSH 0.2 支持斜杠命令携带图片和单个文件；旧版可继续执行无附件命令。
 
 Linux / macOS：
 
@@ -182,6 +184,12 @@ service/tools/   安装、迁移、更新与自检脚本
 本地与上游的全部差异集中在 `service/rover/hooks.py`。
 
 ## 自检
+
+宿主适配回归测试（不读取账号数据）：
+
+```sh
+npm test
+```
 
 ```sh
 cd service
