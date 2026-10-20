@@ -39,6 +39,15 @@ def _reson_color(module, level: int) -> str:
     return _rgba(rgb, 0.85)
 
 
+def _marked_bar(module, image, texture, star: int, weight_id: str) -> str:
+    """自定义权重: 用上游 _mark_weight_id 在分数上方金线写权重 ID。"""
+    from PIL import Image
+
+    bar = Image.open(texture / f"bar_{star}star.png").convert("RGBA")
+    module._mark_weight_id(bar, weight_id)
+    return image.pil_to_b64(bar)
+
+
 def _build_context(
     module,
     image,
@@ -109,13 +118,21 @@ def _build_context(
             }
 
         char_name = module.SPECIAL_CHAR_NAME.get(str(role_id), rank.roleName)
+        weight_id = getattr(rank, "weight_id", "") or ""
+        if weight_id and hasattr(module, "_mark_weight_id"):
+            bar_class = asset_class(
+                ("bar", star, weight_id),
+                lambda s=star, w=weight_id: _marked_bar(module, image, texture, s, w),
+            )
+        else:
+            bar_class = asset_class(
+                ("bar", star), lambda s=star: image.img_to_b64(texture / f"bar_{s}star.png")
+            )
         rows.append(
             {
                 "left": COL_PITCH * (1 if two_col and index >= per_col else 0),
                 "top": BAR_H * (index - per_col if two_col and index >= per_col else index),
-                "bar_class": asset_class(
-                    ("bar", star), lambda s=star: image.img_to_b64(texture / f"bar_{s}star.png")
-                ),
+                "bar_class": bar_class,
                 "avatar_class": asset_class(
                     ("avatar", role_id),
                     lambda im=asset["role_avatar"]: image.pil_to_b64(im, quality=80),

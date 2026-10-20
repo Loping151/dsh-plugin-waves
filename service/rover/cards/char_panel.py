@@ -8,6 +8,7 @@ import base64
 import copy
 import importlib
 import sys
+from contextlib import nullcontext
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -530,6 +531,45 @@ async def _optimal_card(m, icons: Icons, slot, phantom, calc, locale) -> dict:
 # ── 计算 ────────────────────────────────────────────────────────────────
 
 
+# ── 自定义权重 (上游有对应 helper 时才生效, 旧版上游照常走内置) ──────────────
+
+
+def _custom_id(calc_temp) -> str:
+    return calc_temp.get("_cw_id", "") if isinstance(calc_temp, dict) else ""
+
+
+def _builtin_scope(m, calc, role_detail):
+    helper = getattr(m, "_builtin_calc_temp", None)
+    return helper(calc, role_detail) if helper else nullcontext()
+
+
+def _rank_phantom_score(m, calc, role_detail, phantom_score: float) -> float:
+    helper = getattr(m, "_builtin_phantom_score", None)
+    return helper(calc, role_detail, phantom_score) if helper else phantom_score
+
+
+def _template_box(m, calc_temp, locale, change_command: str = "") -> dict:
+    """评分模板框: 与上游 _template_tips 同规则, 向左加宽不压换装文字, 放不下再缩字号。"""
+    label = m.t("评分模板", locale)
+    namer = getattr(m, "_template_name", None)
+    name = namer(calc_temp, locale) if namer else m.t(calc_temp["name"], locale, partial=True)
+    measure = getattr(m, "text_width_with_emoji_fallback", None)
+
+    def width(text, font):
+        return measure(text, font) if measure else font.getlength(text)
+
+    right = getattr(m, "_TEMPLATE_RIGHT", 1180)
+    reserve = 74 + width(change_command, m.waves_font_18) if change_command else 0
+    max_w = max(400, min(getattr(m, "_TEMPLATE_MAX_W", 1140), right - reserve))
+    label_w, text_w = width(label, m.waves_font_24), width(name, m.waves_font_24)
+    need = int(20 + label_w + 30 + text_w + 50)
+    box_w = int(min(max(400, need), max_w))
+    size = 24
+    if need > max_w and text_w > 0:
+        size = max(14, int(24 * (max_w - 100 - label_w) / text_w))
+    return {"label": label, "name": name, "left": int(right - box_w), "width": box_w, "size": size}
+
+
 def _prepare_calc(m, role_detail, enemy_detail=None, is_limit=False):
     """与 ph_card_draw 同一套预处理, 只取数不出图。"""
     calc_module = _mod(m, "utils.calc")
@@ -701,7 +741,8 @@ async def _render_detail(
         try:
             score_calc = score_detail[0] if isinstance(score_detail, list) else score_detail
             setattr(calc, "_score_title", score_calc.get("title", f"综合评分-{char_name}"))
-            score_report = score_calc["func"](calc, role_detail)
+            with _builtin_scope(m, calc, role_detail):
+                score_report = score_calc["func"](calc, role_detail)
         except Exception as e:
             logger.warning(f"[面板] {char_name} 综合评分失败: {e}")
 
@@ -731,11 +772,12 @@ async def _render_detail(
                 rank_expected = m.comma_separated_number(expected_str)
             except Exception as e:
                 logger.warning(f"[面板] 排行伤害计算失败: {e}")
+        rank_score = _rank_phantom_score(m, calc, role_detail, phantom_score)
         one_rank = await m.get_one_rank(
             m.OneRankRequest(
                 char_id=int(char_id),
                 waves_id=uid,
-                phantom_score=phantom_score if phantom_score > 0 else None,
+                phantom_score=rank_score if rank_score > 0 else None,
                 expected_damage=rank_expected,
             )
         )
@@ -772,8 +814,7 @@ async def _render_detail(
         "bar_even": _texture(m, "ph_0.png", icons),
         "bar_odd": _texture(m, "ph_1.png", icons),
         "stat_groups": await _stat_grid(m, icons, calc, calc.phantom_card, role_detail, locale) if has_phantom else [],
-        "template_label": m.t("评分模板", locale),
-        "template_name": m.t(calc.calc_temp["name"], locale, partial=True) if has_phantom else "",
+        "template": _template_box(m, calc.calc_temp, locale, change_command) if has_phantom else None,
         "change_command": change_command,
         "grade": grade_ctx if is_draw else None,
         "cards": cards if is_draw else [],
@@ -898,7 +939,10 @@ async def _render_weight(m, ev, uid, char, user_id, waves_id, is_limit_query):
         stat_groups = await _stat_grid(m, icons, calc, panel_card, role_detail, locale)
 
         shuxing = f"{role_detail.role.attributeName}伤害加成"
-        if weight_modals:
+        custom_id = _custom_id(calc.calc_temp)
+        if custom_id:
+            weight_temps = [(calc.calc_temp, f"自定义 {custom_id}")]
+        elif weight_modals:
             weight_temps = [
                 (
                     m.get_calc_map(
@@ -937,8 +981,7 @@ async def _render_weight(m, ev, uid, char, user_id, waves_id, is_limit_query):
         "bar_even": _texture(m, "ph_0.png", icons),
         "bar_odd": _texture(m, "ph_1.png", icons),
         "stat_groups": [],
-        "template_label": m.t("评分模板", locale),
-        "template_name": m.t(calc.calc_temp["name"], locale, partial=True) if has_phantom else "",
+        "template": _template_box(m, calc.calc_temp, locale) if has_phantom else None,
         "change_command": "",
         "grade": grade_ctx,
         "cards": cards,

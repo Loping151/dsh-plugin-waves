@@ -378,10 +378,10 @@ body {
                 {{ STATBAR(row, echo.bar_even, echo.bar_odd, 40 + gi * 370, 100 + loop.index0 * 50) }}
             {% endfor %}
         {% endfor %}
-        {% if echo.template_name %}
-        <div class="bar {{ echo.bar_odd }}" style="left:780px;top:45px">
-            {{ T(20, 50, echo.template_label, '#ffffff', 24) }}
-            {{ T(350, 50, echo.template_name, 'rgb(255,255,0)', 24, 'rm') }}
+        {% if echo.template %}{% set tb = echo.template %}
+        <div class="bar {{ echo.bar_odd }}" style="left:{{ tb.left }}px;top:45px;width:{{ tb.width }}px">
+            {{ T(20, 50, tb.label, '#ffffff', 24) }}
+            {{ T(tb.width - 50, 50, tb.name, 'rgb(255,255,0)', tb.size, 'rm') }}
         </div>
         {% endif %}
 
