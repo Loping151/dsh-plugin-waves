@@ -184,8 +184,8 @@ if ($dshCmd -and (Test-Path $profilePkg)) {
 }
 if (Has "node") {
     $nodeVer = & node -v 2>$null
-    if ($nodeVer -match '^v(\d+)' -and [int]$Matches[1] -lt 22) {
-        Write-Host "`n注意: 当前 node 为 $nodeVer, dsh 需要 22+, 启动前请切换" -ForegroundColor Yellow
+    if ($nodeVer -match '^v(\d+)\.(\d+)' -and ([int]$Matches[1] -lt 22 -or ([int]$Matches[1] -eq 24 -and [int]$Matches[2] -lt 2))) {
+        Write-Host "`n注意: 当前 node 为 $nodeVer, dsh 需要 22.19+ 或 24.2+, 启动前请切换" -ForegroundColor Yellow
     }
 }
 

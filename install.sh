@@ -134,9 +134,11 @@ PROFILE_PKG="${DSH_HOME:-$HOME/.dsh}/profiles/$PROFILE/node_modules/dsh-plugin-w
 if [ -d "$DSH_NM" ] && [ -d "$PROFILE_PKG" ]; then
   ln -sfn "$PROFILE_PKG" "$DSH_NM/dsh-plugin-waves"
 fi
-NODE_MAJOR="$(node -v 2>/dev/null | sed 's/^v\([0-9]*\).*/\1/')"
-[ -n "$NODE_MAJOR" ] && [ "$NODE_MAJOR" -lt 22 ] \
-  && printf '\n\033[33m注意: 当前 node 为 v%s, dsh 需要 22+, 启动前请切换\033[0m\n' "$NODE_MAJOR"
+NODE_VER="$(node -v 2>/dev/null | sed 's/^v//')"
+NODE_MAJOR="${NODE_VER%%.*}"; NODE_MINOR="$(echo "$NODE_VER" | cut -d. -f2)"
+if [ -n "$NODE_MAJOR" ] && { [ "$NODE_MAJOR" -lt 22 ] || { [ "$NODE_MAJOR" -eq 24 ] && [ "${NODE_MINOR:-0}" -lt 2 ]; }; }; then
+  printf '\n\033[33m注意: 当前 node 为 v%s, dsh 需要 22.19+ 或 24.2+, 启动前请切换\033[0m\n' "$NODE_VER"
+fi
 
 cat <<EOF
 

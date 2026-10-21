@@ -149,3 +149,13 @@ test('settled tool cards use current metadata and the real session for follow-up
   const request = requests.find(({ path }) => path === '/waves-api/api/chat')
   assert.equal(JSON.parse(request.options.body).session_id, 'session')
 })
+
+test('service env drops bracketed no_proxy entries that httpx rejects', async () => {
+  const { serviceEnv } = await import('../lib/host/service.js')
+  const env = serviceEnv(9777, { no_proxy: 'localhost,127.0.0.1,::1,[::1]', NO_PROXY: '[::1]', HTTP_PROXY: 'http://127.0.0.1:1' })
+  assert.equal(env.no_proxy, 'localhost,127.0.0.1,::1')
+  assert.equal(env.NO_PROXY, '')
+  assert.equal(env.HTTP_PROXY, 'http://127.0.0.1:1')
+  assert.equal(env.ROVER_PORT, '9777')
+  assert.equal(serviceEnv(1, {}).no_proxy, undefined)
+})
