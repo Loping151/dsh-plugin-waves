@@ -63,9 +63,10 @@ test('no attachments and canceled commands keep their original semantics', async
   assert.match(result.text, /已取消/)
 })
 
-async function clientFixture(execution) {
+async function clientFixture(execution, { deferred = [] } = {}) {
   let plugin, source
   const slots = new Map()
+  const pending = new Map()
   const requests = []
   const react = {
     createElement: (type, props, ...children) => ({ type, props, children }),
@@ -90,10 +91,17 @@ async function clientFixture(execution) {
     inject: (dependencies, setup) => setup(ctx),
     remote: { commands: { execute: execution } },
     inputTriggers: { registerSource: (registered) => { source = registered } },
-    slots: { inject: (_name, setup) => setup(), register: (spec, view) => { slots.set(spec.name + ":" + (spec.key || spec.id), view); return () => {} } },
+    slots: {
+      inject: (name, setup) => deferred.includes(name) ? pending.set(name, setup) : setup(),
+      register: (spec, view) => {
+        const key = spec.name + ":" + (spec.key || spec.id)
+        slots.set(key, view)
+        return () => slots.delete(key)
+      },
+    },
   }
   plugin.apply(ctx)
-  return { source, slots, requests }
+  return { source, slots, requests, declare: (name) => pending.get(name)() }
 }
 
 test('compact slash claims follow the DSH 0.2 contract and forward attachments once', async () => {
@@ -158,4 +166,16 @@ test('service env drops bracketed no_proxy entries that httpx rejects', async ()
   assert.equal(env.HTTP_PROXY, 'http://127.0.0.1:1')
   assert.equal(env.ROVER_PORT, '9777')
   assert.equal(serviceEnv(1, {}).no_proxy, undefined)
+})
+
+test('config page lives on the plugins page and falls back to settings only without it', async () => {
+  const { slots } = await clientFixture()
+  assert.ok(slots.has('plugins.bundle.config:dsh-plugin-waves'))
+  assert.ok(!slots.has('settings.section:waves'))
+
+  const legacy = await clientFixture(undefined, { deferred: ['plugins.bundle.config'] })
+  assert.ok(legacy.slots.has('settings.section:waves'))
+  legacy.declare('plugins.bundle.config')
+  assert.ok(legacy.slots.has('plugins.bundle.config:dsh-plugin-waves'))
+  assert.ok(!legacy.slots.has('settings.section:waves'))
 })

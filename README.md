@@ -165,7 +165,7 @@ cd service && .venv/bin/python tools/update_plugins.py
 | `service/data/RoverSign/config.json` | 签到 |
 | `service/data/ScoreEcho/config.json` | 识图评分 |
 
-这些也可以在 dsh 的**设置 → 鸣潮**里直接改，共 60 余项（只留下本地场景用得上的），敏感项显示为掩码。
+这些也可以在 dsh 侧栏的**插件 → 鸣潮**页里直接改，共 60 余项（只留下本地场景用得上的），敏感项显示为掩码。
 数据目录首次运行自动生成，不需要预先准备。
 
 ## 结构
